@@ -48,7 +48,8 @@ serve(async (req) => {
       console.log('Access token expired, refreshing...');
       const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
       const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET');
-      const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot?client_id=${client_id}`; // Note: redirect_uri is required for refresh token flow too
+      // Corrected: The redirect URI for refresh token flow should also be static
+      const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`; 
 
       if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
         throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
