@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom'; // Import useLocation
 import {
   Table,
   TableBody,
@@ -14,18 +15,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError } from '@/utils/toast';
 
-const fetchContacts = async () => {
-  const response = await fetch('https://txfsspgkakryggiodgic.supabase.co/functions/v1/get-all-contacts');
+const fetchContacts = async (clientId) => {
+  if (!clientId) {
+    throw new Error('Client ID is missing. Please install the app first.');
+  }
+  const response = await fetch(`https://txfsspgkakryggiodgic.supabase.co/functions/v1/get-hubspot-contacts?client_id=${clientId}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch contacts');
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch contacts');
   }
   return response.json();
 };
 
 const Contacts = () => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const clientId = params.get('client_id'); // Get client_id from URL
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['contacts'],
-    queryFn: fetchContacts,
+    queryKey: ['contacts', clientId], // Include clientId in query key
+    queryFn: () => fetchContacts(clientId),
+    enabled: !!clientId, // Only run query if clientId is available
   });
 
   React.useEffect(() => {
@@ -40,7 +50,12 @@ const Contacts = () => {
         <CardTitle className="text-center text-3xl">HubSpot Contacts</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {!clientId ? (
+          <div className="text-center text-muted-foreground">
+            <p>Please install the app first to view contacts.</p>
+            <p className="text-sm">Go back to the <a href="/" className="text-blue-500 hover:underline">home page</a> to install.</p>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />

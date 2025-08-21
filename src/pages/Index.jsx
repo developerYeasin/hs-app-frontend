@@ -3,8 +3,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique client_id
 
 const Index = () => {
+  const handleInstallClick = () => {
+    const clientId = uuidv4(); // Generate a unique ID for this installation
+    // Redirect to the install-hubspot edge function, passing the generated client_id
+    window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientId}`;
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-8">
       <h1 className="text-4xl font-bold mb-6 text-center">
@@ -49,7 +56,7 @@ const Index = () => {
         </div>
       </div>
 
-      <Button size="lg" className="px-8 flex py-3 text-lg" asChild>
+      <Button size="lg" className="px-8 py-3 text-lg" onClick={handleInstallClick}>
         <Download className="mr-2 h-5 w-5" />
         Install App
       </Button>
