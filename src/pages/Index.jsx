@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique client_id
+import { v4 as uuidv4 } from "uuid"; // Import uuid for generating unique client_id
 
 const Index = () => {
   const handleInstallClick = () => {
@@ -56,7 +56,11 @@ const Index = () => {
         </div>
       </div>
 
-      <Button size="lg" className="px-8 py-3 text-lg" onClick={handleInstallClick}>
+      <Button
+        size="lg"
+        className="px-8 py-3 text-lg flex "
+        onClick={handleInstallClick}
+      >
         <Download className="mr-2 h-5 w-5" />
         Install App
       </Button>
