@@ -14,18 +14,32 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const client_id = url.searchParams.get('client_id'); // Get client_id from query param
+    const stateParam = url.searchParams.get('state'); // Get the state parameter
 
-    if (!code || !client_id) {
-      return new Response(JSON.stringify({ error: 'Authorization code or client_id missing.' }), {
+    if (!code || !stateParam) {
+      return new Response(JSON.stringify({ error: 'Authorization code or state parameter missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
+    // Decode and parse the state parameter to get the client_id
+    let client_id;
+    try {
+      const decodedState = JSON.parse(decodeURIComponent(stateParam));
+      client_id = decodedState.client_id;
+    } catch (parseError) {
+      throw new Error('Invalid state parameter format.');
+    }
+
+    if (!client_id) {
+      throw new Error('Client ID missing from state parameter.');
+    }
+
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
     const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET');
-    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot?client_id=${client_id}`;
+    // The redirect URI should be static, matching the one configured in HubSpot
+    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
     if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
       throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
@@ -64,7 +78,7 @@ serve(async (req) => {
     const { data, error } = await supabaseClient
       .from('client')
       .upsert({
-        id: client_id, // Use client_id as the primary key
+        id: client_id, // Use client_id from state as the primary key
         contacts: 'hubspot_integration', // Placeholder, can be updated later
         accessToken: tokens.access_token,
         sessionID: client_id, // Using client_id as sessionID for consistency
