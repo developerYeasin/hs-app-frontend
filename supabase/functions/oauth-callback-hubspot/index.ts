@@ -16,6 +16,9 @@ serve(async (req) => {
     const code = url.searchParams.get('code');
     const stateParam = url.searchParams.get('state'); // Get the state parameter
 
+    console.log('Received code:', code);
+    console.log('Received stateParam (raw):', stateParam);
+
     if (!code || !stateParam) {
       return new Response(JSON.stringify({ error: 'Authorization code or state parameter missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -26,10 +29,16 @@ serve(async (req) => {
     // Decode and parse the state parameter to get the client_id
     let client_id;
     try {
-      const decodedState = JSON.parse(decodeURIComponent(stateParam));
+      const decodedStateString = decodeURIComponent(stateParam);
+      console.log('Decoded state string:', decodedStateString);
+      const decodedState = JSON.parse(decodedStateString);
       client_id = decodedState.client_id;
     } catch (parseError) {
-      throw new Error('Invalid state parameter format.');
+      console.error('Error parsing state parameter:', parseError.message);
+      return new Response(JSON.stringify({ error: `Invalid state parameter format: ${parseError.message}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
     }
 
     if (!client_id) {
