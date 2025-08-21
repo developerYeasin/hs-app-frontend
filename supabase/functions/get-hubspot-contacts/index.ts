@@ -22,12 +22,17 @@ serve(async (req) => {
       });
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('Supabase URL (get-hubspot-contacts):', supabaseUrl ? 'Set' : 'Not Set');
+    console.log('Supabase Service Role Key (get-hubspot-contacts):', supabaseServiceRoleKey ? 'Set' : 'Not Set');
+
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      supabaseUrl ?? '',
+      supabaseServiceRoleKey ?? ''
     );
 
-    // Retrieve client tokens from database
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')
       .select('accessToken, refresh_token, expires_at')
@@ -43,12 +48,10 @@ serve(async (req) => {
     const refreshToken = clientData.refresh_token;
     const expiresAt = new Date(clientData.expires_at);
 
-    // Check if access token is expired and refresh if needed
     if (expiresAt < new Date()) {
       console.log('Access token expired, refreshing...');
       const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
       const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET');
-      // Corrected: The redirect URI for refresh token flow should also be static
       const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`; 
 
       if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
@@ -64,7 +67,7 @@ serve(async (req) => {
           grant_type: 'refresh_token',
           client_id: HUBSPOT_CLIENT_ID,
           client_secret: HUBSPOT_CLIENT_SECRET,
-          redirect_uri: HUBSPOT_REDIRECT_URI, // Required for refresh token flow
+          redirect_uri: HUBSPOT_REDIRECT_URI,
           refresh_token: refreshToken,
         }).toString(),
       });
@@ -78,12 +81,11 @@ serve(async (req) => {
       accessToken = newTokens.access_token;
       const newExpiresAt = new Date(Date.now() + (newTokens.expires_in * 1000));
 
-      // Update tokens in database
       const { error: updateError } = await supabaseClient
         .from('client')
         .update({
           accessToken: accessToken,
-          refresh_token: newTokens.refresh_token || refreshToken, // Use new refresh token if provided
+          refresh_token: newTokens.refresh_token || refreshToken,
           expires_at: newExpiresAt.toISOString(),
         })
         .eq('id', client_id);
@@ -94,7 +96,6 @@ serve(async (req) => {
       }
     }
 
-    // Fetch contacts from HubSpot API
     const hubspotResponse = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?properties=firstname,lastname,email,company', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -109,14 +110,10 @@ serve(async (req) => {
 
     const hubspotContacts = await hubspotResponse.json();
 
-    // Map HubSpot contacts to match your existing table structure if needed
-    // The current `contacts` table has `id`, `name`, `deal_id`, `created_at`.
-    // HubSpot API returns `id`, `properties.firstname`, `properties.lastname`, etc.
-    // We need to transform this.
     const transformedContacts = hubspotContacts.results.map((contact: any) => ({
       id: contact.id,
       name: `${contact.properties.firstname || ''} ${contact.properties.lastname || ''}`.trim(),
-      deal_id: contact.properties.deal_id || null, // Assuming deal_id might come from properties
+      deal_id: contact.properties.deal_id || null,
       created_at: contact.createdAt,
     }));
 

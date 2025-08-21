@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const stateParam = url.searchParams.get('state'); // Get the state parameter
+    const stateParam = url.searchParams.get('state');
 
     console.log('Received code:', code);
     console.log('Received stateParam (raw):', stateParam);
@@ -26,7 +26,6 @@ serve(async (req) => {
       });
     }
 
-    // Decode and parse the state parameter to get the client_id
     let client_id;
     try {
       const decodedStateString = decodeURIComponent(stateParam);
@@ -47,7 +46,6 @@ serve(async (req) => {
 
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
     const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET');
-    // The redirect URI should be static, matching the one configured in HubSpot
     const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
     if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
@@ -75,25 +73,29 @@ serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('Supabase URL (oauth-callback-hubspot):', supabaseUrl ? 'Set' : 'Not Set');
+    console.log('Supabase Service Role Key (oauth-callback-hubspot):', supabaseServiceRoleKey ? 'Set' : 'Not Set');
+
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      supabaseUrl ?? '',
+      supabaseServiceRoleKey ?? ''
     );
 
-    // Calculate expiration time
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
-    // Upsert (insert or update) the client record with new tokens
     const { data, error } = await supabaseClient
       .from('client')
       .upsert({
-        id: client_id, // Use client_id from state as the primary key
-        contacts: 'hubspot_integration', // Placeholder, can be updated later
+        id: client_id,
+        contacts: 'hubspot_integration',
         accessToken: tokens.access_token,
-        sessionID: client_id, // Using client_id as sessionID for consistency
+        sessionID: client_id,
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt.toISOString(),
-      }, { onConflict: 'id' }) // Conflict on 'id' to update existing record
+      }, { onConflict: 'id' })
       .select();
 
     if (error) {
@@ -101,11 +103,10 @@ serve(async (req) => {
       throw new Error(`Failed to save tokens to database: ${error.message}`);
     }
 
-    // Redirect to the contacts page after successful installation
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `/contacts?client_id=${client_id}`, // Redirect to contacts page with client_id
+        'Location': `/contacts?client_id=${client_id}`,
         ...corsHeaders,
       },
     });
