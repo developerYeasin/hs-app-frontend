@@ -1,4 +1,3 @@
-"use client";
 /** @jsxImportSource react */
 
 import React, { useState } from 'react';
@@ -46,7 +45,7 @@ const CustomLoginForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
-          className="pl-4" {/* Added padding-left */}
+          className="pl-4"
         />
       </div>
       <div className="grid gap-2">
@@ -59,7 +58,7 @@ const CustomLoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="pl-4 pr-10" {/* Added padding-left, kept padding-right */}
+            className="pl-4 pr-10"
           />
           <Button
             type="button"
