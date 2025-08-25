@@ -11,9 +11,9 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login.jsx";
 import SignUp from "./pages/SignUp.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
-import AddCard from "./pages/admin/AddCard.jsx"; // Import new admin page
-import AddButtonToCard from "./pages/admin/AddButtonToCard.jsx"; // Import new admin page
-import AdminLayout from "./components/admin/AdminLayout.jsx"; // Import new admin layout
+import AddCard from "./pages/admin/AddCard.jsx";
+import AddButtonToCard from "./pages/admin/AddButtonToCard.jsx";
+import AdminLayout from "./components/admin/AdminLayout.jsx";
 import { SessionContextProvider, useSession } from "./components/auth/SessionContextProvider.jsx";
 
 const queryClient = new QueryClient();
@@ -41,24 +41,25 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <SessionContextProvider>
-            <Layout>
-              <Routes>
+            <Routes>
+              {/* Routes that use the main Header and Footer */}
+              <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/thank-you" element={<ThankYou />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
-                {/* Protected Admin Routes */}
-                <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-                  <Route index element={<AdminDashboard />} /> {/* Default admin route */}
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="add-card" element={<AddCard />} />
-                  <Route path="add-button-to-card" element={<AddButtonToCard />} />
-                  {/* Add other admin routes here */}
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
+                <Route path="*" element={<NotFound />} /> {/* NotFound also uses the main layout */}
+              </Route>
+
+              {/* Admin Routes that use AdminLayout (without main Header/Footer) */}
+              <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="add-card" element={<AddCard />} />
+                <Route path="add-button-to-card" element={<AddButtonToCard />} />
+              </Route>
+            </Routes>
           </SessionContextProvider>
         </BrowserRouter>
       </>

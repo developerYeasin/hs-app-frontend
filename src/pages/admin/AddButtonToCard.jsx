@@ -11,12 +11,18 @@ import { showError, showSuccess } from '@/utils/toast';
 import { useQuery } from '@tanstack/react-query';
 
 const fetchCards = async () => {
+  console.log('AddButtonToCard: Attempting to fetch cards...');
   const { data, error } = await supabase.from('cards').select('id, title');
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('AddButtonToCard: Error fetching cards from Supabase:', error.message);
+    throw new Error(error.message);
+  }
+  console.log('AddButtonToCard: Successfully fetched cards:', data);
   return data;
 };
 
 const AddButtonToCard = () => {
+  console.log('AddButtonToCard: Component rendering...');
   const [selectedCardId, setSelectedCardId] = useState('');
   const [buttonText, setButtonText] = useState('');
   const [buttonUrl, setButtonUrl] = useState('');
@@ -30,8 +36,13 @@ const AddButtonToCard = () => {
   useEffect(() => {
     if (isErrorCards) {
       showError('Failed to load cards: ' + cardsError.message);
+      console.error('AddButtonToCard: useQuery error state:', cardsError);
     }
   }, [isErrorCards, cardsError]);
+
+  console.log('AddButtonToCard: isLoadingCards:', isLoadingCards);
+  console.log('AddButtonToCard: isErrorCards:', isErrorCards);
+  console.log('AddButtonToCard: cards data:', cards);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +60,7 @@ const AddButtonToCard = () => {
 
     if (error) {
       showError('Failed to add button: ' + error.message);
+      console.error('AddButtonToCard: Error adding button to Supabase:', error);
     } else {
       showSuccess('Button added successfully!');
       setSelectedCardId('');
