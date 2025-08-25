@@ -1,36 +1,57 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
-import { showError, showSuccess } from '@/utils/toast';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showSuccess } from "@/utils/toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const fetchCardsForSelect = async () => {
-  const { data, error } = await supabase.from('cards').select('id, title').order('title', { ascending: true });
+  const { data, error } = await supabase
+    .from("cards")
+    .select("id, title")
+    .order("title", { ascending: true });
   if (error) throw new Error(error.message);
   return data;
 };
 
 const AddButtonModal = ({ isOpen, onOpenChange }) => {
   const queryClient = useQueryClient();
-  const [selectedCardId, setSelectedCardId] = useState('');
-  const [buttonText, setButtonText] = useState('');
-  const [buttonUrl, setButtonUrl] = useState('');
+  const [selectedCardId, setSelectedCardId] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { data: cards, isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery({
-    queryKey: ['adminCards'], // This query is for the select dropdown
+  const {
+    data: cards,
+    isLoading: isLoadingCards,
+    isError: isErrorCards,
+    error: cardsError,
+  } = useQuery({
+    queryKey: ["adminCards"], // This query is for the select dropdown
     queryFn: fetchCardsForSelect,
   });
 
   React.useEffect(() => {
     if (isErrorCards) {
-      showError('Failed to load cards for selection: ' + cardsError.message);
+      showError("Failed to load cards for selection: " + cardsError.message);
     }
   }, [isErrorCards, cardsError]);
 
@@ -39,23 +60,29 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
     setLoading(true);
 
     if (!selectedCardId) {
-      showError('Please select a card.');
+      showError("Please select a card.");
       setLoading(false);
       return;
     }
 
     const { error } = await supabase
-      .from('buttons')
-      .insert([{ card_id: selectedCardId, button_text: buttonText, button_url: buttonUrl }]);
+      .from("buttons")
+      .insert([
+        {
+          card_id: selectedCardId,
+          button_text: buttonText,
+          button_url: buttonUrl,
+        },
+      ]);
 
     if (error) {
-      showError('Failed to add button: ' + error.message);
+      showError("Failed to add button: " + error.message);
     } else {
-      showSuccess('Button added successfully!');
-      setSelectedCardId('');
-      setButtonText('');
-      setButtonUrl('');
-      queryClient.invalidateQueries(['adminButtonsList']); // Invalidate to refetch the list in ManageButtons
+      showSuccess("Button added successfully!");
+      setSelectedCardId("");
+      setButtonText("");
+      setButtonUrl("");
+      queryClient.invalidateQueries(["adminButtonsList"]); // Invalidate to refetch the list in ManageButtons
       onOpenChange(false); // Close the modal
     }
     setLoading(false);
@@ -67,26 +94,45 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
         <DialogHeader>
           <DialogTitle>Add New Button</DialogTitle>
           <DialogDescription>
-            Fill in the details for your new button and associate it with a card.
+            Fill in the details for your new button and associate it with a
+            card.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="card-select">Select Card</Label>
-            <Select onValueChange={setSelectedCardId} value={selectedCardId} disabled={isLoadingCards || loading}>
-              <SelectTrigger id="card-select" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+            <Select
+              onValueChange={setSelectedCardId}
+              value={selectedCardId}
+              disabled={isLoadingCards || loading}
+            >
+              <SelectTrigger
+                id="card-select"
+                className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+              >
                 {isLoadingCards ? (
-                  <span className="text-muted-foreground">Loading cards...</span>
+                  <span className="text-muted-foreground">
+                    Loading cards...
+                  </span>
                 ) : (
-                  <SelectValue placeholder="Select a card" />
+                  <SelectValue placeholder="Select a card" className="w-full" />
                 )}
               </SelectTrigger>
-              <SelectContent className="z-[9999] w-full rounded-md shadow-lg" position="popper">
+              <SelectContent
+                className="z-[9999] w-full rounded-md shadow-lg bg-popover text-popover-foreground"
+                position="popper"
+              >
                 {cards?.length === 0 && !isLoadingCards ? (
-                  <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
+                  <div className="p-2 text-sm text-muted-foreground">
+                    No cards available. Add a card first.
+                  </div>
                 ) : (
                   cards?.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
+                    <SelectItem
+                      key={card.id}
+                      value={card.id}
+                      className="w-full"
+                    >
                       {card.title}
                     </SelectItem>
                   ))
@@ -122,7 +168,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={loading || !selectedCardId}>
-              {loading ? 'Adding Button...' : 'Add Button'}
+              {loading ? "Adding Button..." : "Add Button"}
             </Button>
           </DialogFooter>
         </form>
