@@ -87,7 +87,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
                   <SelectValue placeholder="Select a card" />
                 )}
               </SelectTrigger>
-              <SelectContent className="z-[9999] w-full rounded-md shadow-lg bg-popover text-popover-foreground" position="popper">
+              <SelectContent className="w-full rounded-md shadow-lg bg-popover text-popover-foreground">
                 {cards?.length === 0 && !isLoadingCards ? (
                   <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
                 ) : (

@@ -119,8 +119,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
                 )}
               </SelectTrigger>
               <SelectContent
-                className="z-[9999] w-full rounded-md shadow-lg bg-popover text-popover-foreground"
-                position="popper"
+                className="w-full rounded-md shadow-lg bg-popover text-popover-foreground"
               >
                 {cards?.length === 0 && !isLoadingCards ? (
                   <div className="p-2 text-sm text-muted-foreground">
