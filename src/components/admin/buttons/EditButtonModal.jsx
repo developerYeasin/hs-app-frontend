@@ -69,7 +69,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-6 rounded-lg shadow-xl">
+      <DialogContent className="fixed inset-0 z-50 flex items-center justify-center max-w-md p-6 rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle>Edit Button</DialogTitle>
           <DialogDescription>
