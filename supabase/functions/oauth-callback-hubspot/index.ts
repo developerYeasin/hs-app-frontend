@@ -27,11 +27,13 @@ serve(async (req) => {
     }
 
     let client_id;
+    let user_id = null; // Initialize user_id
     try {
       const decodedStateString = decodeURIComponent(stateParam);
       console.log('Decoded state string:', decodedStateString);
       const decodedState = JSON.parse(decodedStateString);
       client_id = decodedState.client_id;
+      user_id = decodedState.user_id || null; // Extract user_id if present
     } catch (parseError) {
       console.error('Error parsing state parameter:', parseError.message);
       return new Response(JSON.stringify({ error: `Invalid state parameter format: ${parseError.message}` }), {
@@ -86,16 +88,19 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
+    const upsertData = {
+      id: client_id,
+      contacts: 'hubspot_integration',
+      accessToken: tokens.access_token,
+      sessionID: client_id,
+      refresh_token: tokens.refresh_token,
+      expires_at: expiresAt.toISOString(),
+      user_id: user_id, // Include user_id in upsert
+    };
+
     const { data, error } = await supabaseClient
       .from('client')
-      .upsert({
-        id: client_id,
-        contacts: 'hubspot_integration',
-        accessToken: tokens.access_token,
-        sessionID: client_id,
-        refresh_token: tokens.refresh_token,
-        expires_at: expiresAt.toISOString(),
-      }, { onConflict: 'id' })
+      .upsert(upsertData, { onConflict: 'id' })
       .select();
 
     if (error) {
@@ -106,7 +111,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `/contacts?client_id=${client_id}`,
+        'Location': `/admin/contacts?client_id=${client_id}`, // Redirect to admin contacts page
         ...corsHeaders,
       },
     });

@@ -4,14 +4,22 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { v4 as uuidv4 } from "uuid"; // Import uuid for generating unique client_id
+import { useSession } from "@/components/auth/SessionContextProvider.jsx"; // Import useSession
 
 const Index = () => {
   console.log("Index component is rendering!"); // Added for debugging
+  const { user } = useSession(); // Get the current user
 
   const handleInstallClick = () => {
     const clientId = uuidv4(); // Generate a unique ID for this installation
-    // Redirect to the install-hubspot edge function, passing the generated client_id
-    window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientId}`;
+    const statePayload = { client_id: clientId };
+
+    if (user) {
+      statePayload.user_id = user.id; // Add user_id if authenticated
+    }
+
+    // Redirect to the install-hubspot edge function, passing the generated client_id and user_id (if any)
+    window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientId}&state=${encodeURIComponent(JSON.stringify(statePayload))}`;
   };
 
   return (

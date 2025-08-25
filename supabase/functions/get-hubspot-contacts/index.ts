@@ -13,7 +13,49 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const client_id = url.searchParams.get('client_id');
+    let client_id = url.searchParams.get('client_id');
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    const supabaseClient = createClient(
+      supabaseUrl ?? '',
+      supabaseServiceRoleKey ?? ''
+    );
+
+    // If client_id is not provided in the URL, try to get it from the authenticated user's session
+    if (!client_id) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        });
+      }
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error('Auth error in get-hubspot-contacts:', authError?.message);
+        return new Response(JSON.stringify({ error: 'Unauthorized: Could not get user from token.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        });
+      }
+
+      // Fetch the client_id associated with this user
+      const { data: clientLinkData, error: clientLinkError } = await supabaseClient
+        .from('client')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (clientLinkError || !clientLinkData) {
+        console.error('Error fetching client_id for user:', clientLinkError);
+        throw new Error('No HubSpot integration found for this user. Please install the app.');
+      }
+      client_id = clientLinkData.id;
+    }
 
     if (!client_id) {
       return new Response(JSON.stringify({ error: 'client_id is required' }), {
@@ -21,17 +63,6 @@ serve(async (req) => {
         status: 400,
       });
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    console.log('Supabase URL (get-hubspot-contacts):', supabaseUrl ? 'Set' : 'Not Set');
-    console.log('Supabase Service Role Key (get-hubspot-contacts):', supabaseServiceRoleKey ? 'Set' : 'Not Set');
-
-    const supabaseClient = createClient(
-      supabaseUrl ?? '',
-      supabaseServiceRoleKey ?? ''
-    );
 
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')

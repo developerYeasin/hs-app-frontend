@@ -12,7 +12,8 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const initial_client_id = url.searchParams.get('client_id'); // Get client_id from query param from frontend
+    const initial_client_id = url.searchParams.get('client_id');
+    const stateParamFromFrontend = url.searchParams.get('state'); // Get the state param from frontend
 
     if (!initial_client_id) {
       return new Response(JSON.stringify({ error: 'client_id is required' }), {
@@ -23,15 +24,14 @@ serve(async (req) => {
 
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
     const HUBSPOT_SCOPES = 'crm.objects.contacts.read'; // Default scopes
-    // The redirect URI should be static, without client_id in its path
     const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
     if (!HUBSPOT_CLIENT_ID) {
       throw new Error('HUBSPOT_CLIENT_ID environment variable not set.');
     }
 
-    // Encode the client_id into the state parameter
-    const state = encodeURIComponent(JSON.stringify({ client_id: initial_client_id }));
+    // Pass the state parameter received from the frontend directly to HubSpot
+    const state = stateParamFromFrontend ? stateParamFromFrontend : encodeURIComponent(JSON.stringify({ client_id: initial_client_id }));
 
     const authUrl =
       'https://app.hubspot.com/oauth/authorize' +

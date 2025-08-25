@@ -23,20 +23,13 @@ const Header = () => {
                 <Link to="/">Install App</Link>
               </Button>
             </li>
-            <li>
-              <Button variant="ghost" asChild>
-                <Link to="/contacts">Contacts</Link>
-              </Button>
-            </li>
+            {/* Contacts link moved to AdminSidebar */}
             {user ? (
-              <>
-                <li>
-                  <Button variant="ghost" asChild>
-                    <Link to="/admin/dashboard">Admin</Link>
-                  </Button>
-                </li>
-                {/* Logout button moved to AdminSidebar */}
-              </>
+              <li>
+                <Button variant="ghost" asChild>
+                  <Link to="/admin/dashboard">Admin</Link>
+                </Button>
+              </li>
             ) : (
               <li>
                 {/* Changed to a direct Link with button styling for troubleshooting */}
