@@ -9,7 +9,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 
-const CustomSignUpForm: React.FC = () => {
+const CustomSignUpForm = () => { // Removed React.FC
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
