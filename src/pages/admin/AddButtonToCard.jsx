@@ -81,17 +81,21 @@ const AddButtonToCard = () => {
             <Label htmlFor="card-select">Select Card</Label>
             <Select onValueChange={setSelectedCardId} value={selectedCardId} disabled={isLoadingCards || loading}>
               <SelectTrigger id="card-select">
-                <SelectValue placeholder="Select a card" />
+                {isLoadingCards ? (
+                  <span className="text-muted-foreground">Loading cards...</span>
+                ) : (
+                  <SelectValue placeholder="Select a card" />
+                )}
               </SelectTrigger>
               <SelectContent>
-                {isLoadingCards && <SelectItem value="" disabled>Loading cards...</SelectItem>}
-                {cards?.map((card) => (
-                  <SelectItem key={card.id} value={card.id}>
-                    {card.title}
-                  </SelectItem>
-                ))}
-                {!isLoadingCards && cards?.length === 0 && (
-                  <SelectItem value="" disabled>No cards available. Add a card first.</SelectItem>
+                {cards?.length === 0 && !isLoadingCards ? (
+                  <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
+                ) : (
+                  cards?.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.title}
+                    </SelectItem>
+                  ))
                 )}
               </SelectContent>
             </Select>
