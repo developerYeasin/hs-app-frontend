@@ -9,7 +9,8 @@ import Contacts from "./pages/Contacts";
 import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import AdminDashboard from "./pages/admin/AdminDashboard"; // Will create this next
+import SignUp from "./pages/SignUp"; // Import SignUp page
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import { SessionContextProvider, useSession } from "./components/auth/SessionContextProvider";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/thank-you" element={<ThankYou />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} /> {/* Add SignUp route */}
                 {/* Protected Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                   <Route path="dashboard" element={<AdminDashboard />} />

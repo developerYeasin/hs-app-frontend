@@ -26,8 +26,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         setSession(currentSession);
         setUser(currentSession?.user || null);
-        if (location.pathname === '/login') {
-          navigate('/admin/dashboard'); // Redirect to admin dashboard after login
+        if (location.pathname === '/login' || location.pathname === '/signup') { // Also check for signup page
+          navigate('/admin/dashboard'); // Redirect to admin dashboard after login/signup confirmation
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
@@ -39,7 +39,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setSession(currentSession);
         setUser(currentSession?.user || null);
       } else if (event === 'AUTH_ERROR') {
-        showError('Authentication error: ' + currentSession); // currentSession here is actually the error object
+        // currentSession is actually the error object in this case
+        showError('Authentication error: ' + (currentSession as any)?.message || 'Unknown error');
       }
       setIsLoading(false);
     });
