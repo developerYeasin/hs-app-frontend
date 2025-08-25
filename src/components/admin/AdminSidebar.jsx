@@ -55,7 +55,7 @@ const AdminSidebar = () => {
             )}
             asChild
           >
-            <Link to={item.path} className="flex items-center"> {/* Added flex items-center here */}
+            <Link to={item.path} className="flex items-center">
               {item.icon}
               {item.name}
             </Link>
@@ -65,7 +65,7 @@ const AdminSidebar = () => {
       {user && (
         <Button
           variant="ghost"
-          className="w-full justify-start mt-auto"
+          className="w-full justify-start mt-auto flex items-center" {/* Added flex items-center here */}
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
