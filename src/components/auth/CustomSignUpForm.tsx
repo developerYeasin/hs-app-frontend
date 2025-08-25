@@ -1,4 +1,5 @@
 "use client";
+/** @jsxImportSource react */
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 
-const CustomSignUpForm = () => { // Removed React.FC
+const CustomSignUpForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,7 +62,7 @@ const CustomSignUpForm = () => { // Removed React.FC
       </div>
       <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
-        <div className="relative"> {/* New wrapper for input and button */}
+        <div className="relative">
           <Input
             id="password"
             type={showPassword ? 'text' : 'password'}
@@ -69,13 +70,13 @@ const CustomSignUpForm = () => { // Removed React.FC
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="pr-10" {/* Added padding-right */}
+            className="pr-10"
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0" {/* Adjusted positioning */}
+            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0"
             onClick={() => setShowPassword(!showPassword)}
             disabled={loading}
           >
@@ -90,7 +91,7 @@ const CustomSignUpForm = () => { // Removed React.FC
       </div>
       <div className="grid gap-2">
         <Label htmlFor="confirm-password">Confirm Password</Label>
-        <div className="relative"> {/* New wrapper for input and button */}
+        <div className="relative">
           <Input
             id="confirm-password"
             type={showConfirmPassword ? 'text' : 'password'}
@@ -98,13 +99,13 @@ const CustomSignUpForm = () => { // Removed React.FC
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={loading}
-            className="pr-10" {/* Added padding-right */}
+            className="pr-10"
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0" {/* Adjusted positioning */}
+            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             disabled={loading}
           >
