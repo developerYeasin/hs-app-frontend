@@ -48,7 +48,7 @@ const App = () => (
     <TooltipProvider>
       <>
         <Toaster />
-        <Sonner />
+        <Sonner position="top-center" /> {/* Added position="top-center" here */}
         <BrowserRouter>
           <SessionContextProvider>
             <Routes>
