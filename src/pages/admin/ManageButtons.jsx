@@ -76,10 +76,10 @@ const ManageButtons = () => {
 
   return (
     <div className="space-y-8">
-      <Card className="w-full max-w-4xl mx-auto"> {/* Added mx-auto here */}
+      <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-2xl">Manage Buttons</CardTitle>
-          <Button onClick={() => setIsAddModalOpen(true)}>
+          <Button onClick={() => setIsAddModalOpen(true)} className="py-2.5">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Button
           </Button>
         </CardHeader>

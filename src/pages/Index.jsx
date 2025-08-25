@@ -58,7 +58,7 @@ const Index = () => {
 
       <Button
         size="lg"
-        className="px-8 py-3 text-lg flex "
+        className="px-8 py-3 text-lg flex items-center"
         onClick={handleInstallClick}
       >
         <Download className="mr-2 h-5 w-5" />
