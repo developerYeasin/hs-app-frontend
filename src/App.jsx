@@ -11,8 +11,8 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login.jsx";
 import SignUp from "./pages/SignUp.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
-import AddCard from "./pages/admin/AddCard.jsx";
-import AddButtonToCard from "./pages/admin/AddButtonToCard.jsx";
+import ManageCards from "./pages/admin/ManageCards.jsx"; // Updated import
+import ManageButtons from "./pages/admin/ManageButtons.jsx"; // Updated import
 import AdminLayout from "./components/admin/AdminLayout.jsx";
 import { SessionContextProvider, useSession } from "./components/auth/SessionContextProvider.jsx";
 
@@ -56,8 +56,8 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="add-card" element={<AddCard />} />
-                <Route path="add-button-to-card" element={<AddButtonToCard />} />
+                <Route path="cards" element={<ManageCards />} /> {/* Updated path */}
+                <Route path="buttons" element={<ManageButtons />} /> {/* Updated path */}
               </Route>
             </Routes>
           </SessionContextProvider>

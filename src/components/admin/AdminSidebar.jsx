@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, CreditCard, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, CreditCard, List } from 'lucide-react'; // Changed PlusCircle to List
 import { cn } from '@/lib/utils';
 
 const AdminSidebar = () => {
@@ -16,14 +16,14 @@ const AdminSidebar = () => {
       icon: <LayoutDashboard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Add Card',
-      path: '/admin/add-card',
+      name: 'Manage Cards', // Updated name
+      path: '/admin/cards', // Updated path
       icon: <CreditCard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Add Button to Card',
-      path: '/admin/add-button-to-card',
-      icon: <PlusCircle className="mr-2 h-4 w-4" />,
+      name: 'Manage Buttons', // Updated name
+      path: '/admin/buttons', // Updated path
+      icon: <List className="mr-2 h-4 w-4" />, // Updated icon
     },
   ];
 
