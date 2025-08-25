@@ -1,5 +1,3 @@
-/** @jsxImportSource react */
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -57,7 +55,7 @@ const CustomSignUpForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
-          className="pl-4 border" {/* Added border class */}
+          className="pl-4 border"
         />
       </div>
       <div className="grid gap-2">
@@ -70,7 +68,7 @@ const CustomSignUpForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="pl-4 pr-10 border" {/* Added border class */}
+            className="pl-4 pr-10 border"
           />
           <Button
             type="button"
@@ -99,7 +97,7 @@ const CustomSignUpForm = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={loading}
-            className="pl-4 pr-10 border" {/* Added border class */}
+            className="pl-4 pr-10 border"
           />
           <Button
             type="button"
