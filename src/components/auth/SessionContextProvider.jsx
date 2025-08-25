@@ -20,7 +20,7 @@ export const SessionContextProvider = ({ children }) => {
         setSession(currentSession);
         setUser(currentSession?.user || null);
         if (location.pathname === '/login' || location.pathname === '/signup') {
-          navigate('/admin/dashboard');
+          navigate('/admin/dashboard'); // This line handles the redirection
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
