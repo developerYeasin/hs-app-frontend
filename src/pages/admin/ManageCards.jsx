@@ -36,6 +36,9 @@ const ManageCards = () => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [cardToDelete, setCardToDelete] = useState(null);
 
+  // Debug log to see the state of modal open flags
+  console.log("ManageCards state:", { isAddModalOpen, isEditModalOpen, isViewModalOpen, selectedCard });
+
   const { data: cards, isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery({
     queryKey: ['adminCardsList'],
     queryFn: fetchCards,
@@ -58,11 +61,13 @@ const ManageCards = () => {
   };
 
   const openEditModal = (card) => {
+    console.log("Attempting to open Edit Modal for card:", card); // Debug log
     setSelectedCard(card);
     setIsEditModalOpen(true);
   };
 
   const openViewModal = (card) => {
+    console.log("Attempting to open View Modal for card:", card); // Debug log
     setSelectedCard(card);
     setIsViewModalOpen(true);
   };
@@ -72,7 +77,10 @@ const ManageCards = () => {
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-2xl">Manage Cards</CardTitle>
-          <Button onClick={() => setIsAddModalOpen(true)} className="py-2.5 px-4 flex items-center">
+          <Button onClick={() => {
+            console.log("Attempting to open Add Modal"); // Debug log
+            setIsAddModalOpen(true);
+          }} className="py-2.5 px-4 flex items-center">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Card
           </Button>
         </CardHeader>

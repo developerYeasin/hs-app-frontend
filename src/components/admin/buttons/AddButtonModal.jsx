@@ -67,15 +67,13 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
       return;
     }
 
-    const { error } = await supabase
-      .from("buttons")
-      .insert([
-        {
-          card_id: selectedCardId,
-          button_text: buttonText,
-          button_url: buttonUrl,
-        },
-      ]);
+    const { error } = await supabase.from("buttons").insert([
+      {
+        card_id: selectedCardId,
+        button_text: buttonText,
+        button_url: buttonUrl,
+      },
+    ]);
 
     if (error) {
       showError("Failed to add button: " + error.message);
