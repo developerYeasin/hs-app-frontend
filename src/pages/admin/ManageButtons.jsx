@@ -76,7 +76,7 @@ const ManageButtons = () => {
 
   return (
     <div className="space-y-8">
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card className="w-full max-w-4xl mx-auto"> {/* Added mx-auto here */}
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-2xl">Manage Buttons</CardTitle>
           <Button onClick={() => setIsAddModalOpen(true)}>
