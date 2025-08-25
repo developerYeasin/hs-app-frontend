@@ -45,7 +45,7 @@ const CustomLoginForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
-          className="pl-4"
+          className="pl-4 border" {/* Added border class */}
         />
       </div>
       <div className="grid gap-2">
@@ -58,7 +58,7 @@ const CustomLoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="pl-4 pr-10"
+            className="pl-4 pr-10 border" {/* Added border class */}
           />
           <Button
             type="button"
