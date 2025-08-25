@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CustomLoginForm from '@/components/auth/CustomLoginForm.jsx'; // Import the new component
 
 const Login = () => {
+  console.log("Login component is rendering!"); // Added for debugging
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)]">
       <Card className="w-full max-w-md p-4">
