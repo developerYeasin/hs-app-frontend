@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose, // Import DialogClose
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +22,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react"; // Import X icon
 
 const fetchCardsForSelect = async () => {
   const { data, error } = await supabase
@@ -174,10 +172,6 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
             </Button>
           </DialogFooter>
         </form>
-        <DialogClose className="absolute right-[10px] top-[10px] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogClose>
       </DialogContent>
     </Dialog>
   );
