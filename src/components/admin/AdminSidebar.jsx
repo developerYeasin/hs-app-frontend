@@ -43,8 +43,8 @@ const AdminSidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 border-r border-sidebar-border flex flex-col"> {/* Added flex flex-col */}
-      <nav className="space-y-2 flex-grow"> {/* Added flex-grow to push logout to bottom */}
+    <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 border-r border-sidebar-border flex flex-col">
+      <nav className="space-y-2 flex-grow">
         {navItems.map((item) => (
           <Button
             key={item.path}
@@ -55,17 +55,17 @@ const AdminSidebar = () => {
             )}
             asChild
           >
-            <Link to={item.path}>
+            <Link to={item.path} className="flex items-center"> {/* Added flex items-center here */}
               {item.icon}
               {item.name}
             </Link>
           </Button>
         ))}
       </nav>
-      {user && ( // Only show logout if user is logged in
+      {user && (
         <Button
           variant="ghost"
-          className="w-full justify-start mt-auto" // mt-auto pushes it to the bottom
+          className="w-full justify-start mt-auto"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
