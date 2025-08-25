@@ -4,23 +4,11 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/auth/SessionContextProvider";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { showError, showSuccess } from "@/utils/toast";
+// Removed supabase, useNavigate, showError, showSuccess imports as they are no longer needed here
 
 const Header = () => {
   const { user } = useSession();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      showError('Logout failed: ' + error.message);
-    } else {
-      showSuccess('Logged out successfully!');
-      navigate('/login');
-    }
-  };
+  // Removed useNavigate, handleLogout as they are no longer needed here
 
   return (
     <header className="bg-primary text-primary-foreground p-4 shadow-md">
@@ -47,11 +35,7 @@ const Header = () => {
                     <Link to="/admin/dashboard">Admin</Link>
                   </Button>
                 </li>
-                <li>
-                  <Button variant="ghost" onClick={handleLogout}>
-                    Logout
-                  </Button>
-                </li>
+                {/* Logout button moved to AdminSidebar */}
               </>
             ) : (
               <li>

@@ -1,13 +1,18 @@
 "use client";
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, CreditCard, List } from 'lucide-react'; // Changed PlusCircle to List
+import { LayoutDashboard, CreditCard, List, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from "@/components/auth/SessionContextProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showSuccess } from "@/utils/toast";
 
 const AdminSidebar = () => {
   const location = useLocation();
+  const { user } = useSession();
+  const navigate = useNavigate();
 
   const navItems = [
     {
@@ -16,20 +21,30 @@ const AdminSidebar = () => {
       icon: <LayoutDashboard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Manage Cards', // Updated name
-      path: '/admin/cards', // Updated path
+      name: 'Manage Cards',
+      path: '/admin/cards',
       icon: <CreditCard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Manage Buttons', // Updated name
-      path: '/admin/buttons', // Updated path
-      icon: <List className="mr-2 h-4 w-4" />, // Updated icon
+      name: 'Manage Buttons',
+      path: '/admin/buttons',
+      icon: <List className="mr-2 h-4 w-4" />,
     },
   ];
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError('Logout failed: ' + error.message);
+    } else {
+      showSuccess('Logged out successfully!');
+      navigate('/login');
+    }
+  };
+
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 border-r border-sidebar-border h-full">
-      <nav className="space-y-2">
+    <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 border-r border-sidebar-border flex flex-col"> {/* Added flex flex-col */}
+      <nav className="space-y-2 flex-grow"> {/* Added flex-grow to push logout to bottom */}
         {navItems.map((item) => (
           <Button
             key={item.path}
@@ -47,6 +62,16 @@ const AdminSidebar = () => {
           </Button>
         ))}
       </nav>
+      {user && ( // Only show logout if user is logged in
+        <Button
+          variant="ghost"
+          className="w-full justify-start mt-auto" // mt-auto pushes it to the bottom
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
+      )}
     </aside>
   );
 };

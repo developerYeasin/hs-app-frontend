@@ -6,7 +6,7 @@ import { Outlet } from 'react-router-dom';
 
 const AdminLayout = () => {
   return (
-    <div className="flex min-h-[calc(100vh-150px)]">
+    <div className="flex h-screen"> {/* Changed min-h-[calc(100vh-150px)] to h-screen */}
       <AdminSidebar />
       <div className="flex-1 p-6 overflow-auto">
         <Outlet /> {/* This is where nested admin routes will render */}
