@@ -81,7 +81,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
                   <SelectValue placeholder="Select a card" />
                 )}
               </SelectTrigger>
-              <SelectContent className="z-[9999]"> {/* Added z-[9999] here */}
+              <SelectContent className="z-[9999] w-full" position="popper"> {/* Added w-full and position="popper" */}
                 {cards?.length === 0 && !isLoadingCards ? (
                   <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
                 ) : (
