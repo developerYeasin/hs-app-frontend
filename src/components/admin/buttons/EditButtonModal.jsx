@@ -69,7 +69,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 grid w-full gap-4 border bg-background p-8 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg md:w-full sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] p-6 rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle>Edit Button</DialogTitle>
           <DialogDescription>
@@ -80,14 +80,14 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
           <div className="grid gap-2">
             <Label htmlFor="card-select">Select Card</Label>
             <Select onValueChange={setSelectedCardId} value={selectedCardId} disabled={isLoadingCards || loading}>
-              <SelectTrigger id="card-select">
+              <SelectTrigger id="card-select" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
                 {isLoadingCards ? (
                   <span className="text-muted-foreground">Loading cards...</span>
                 ) : (
                   <SelectValue placeholder="Select a card" />
                 )}
               </SelectTrigger>
-              <SelectContent className="z-[9999] w-full" position="popper"> {/* Added w-full and position="popper" */}
+              <SelectContent className="z-[9999] w-full rounded-md shadow-lg" position="popper">
                 {cards?.length === 0 && !isLoadingCards ? (
                   <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
                 ) : (
@@ -110,6 +110,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
               onChange={(e) => setButtonText(e.target.value)}
               required
               disabled={loading}
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <div className="grid gap-2">
@@ -122,6 +123,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
               onChange={(e) => setButtonUrl(e.target.value)}
               required
               disabled={loading}
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <DialogFooter>

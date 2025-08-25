@@ -47,7 +47,7 @@ const EditCardModal = ({ isOpen, onOpenChange, card }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 grid w-full gap-4 border bg-background p-8 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg md:w-full sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] p-6 rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle>Edit Card</DialogTitle>
           <DialogDescription>
@@ -65,6 +65,7 @@ const EditCardModal = ({ isOpen, onOpenChange, card }) => {
               onChange={(e) => setTitle(e.target.value)}
               required
               disabled={loading}
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <div className="grid gap-2">
@@ -75,6 +76,7 @@ const EditCardModal = ({ isOpen, onOpenChange, card }) => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={loading}
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <div className="grid gap-2">
@@ -86,6 +88,7 @@ const EditCardModal = ({ isOpen, onOpenChange, card }) => {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               disabled={loading}
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <DialogFooter>
