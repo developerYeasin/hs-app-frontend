@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useSession } from '@/components/auth/SessionContextProvider';
+import { useSession } from '@/components/auth/SessionContextProvider.jsx';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 import { useNavigate } from 'react-router-dom';
 import { showError, showSuccess } from '@/utils/toast';
 
-const AdminDashboard: React.FC = () => {
+const AdminDashboard = () => {
   const { user, isLoading } = useSession();
   const navigate = useNavigate();
 

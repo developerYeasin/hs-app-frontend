@@ -8,15 +8,15 @@ import Index from "./pages/Index";
 import Contacts from "./pages/Contacts";
 import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp"; // Import SignUp page
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import { SessionContextProvider, useSession } from "./components/auth/SessionContextProvider";
+import Login from "./pages/Login.jsx";
+import SignUp from "./pages/SignUp.jsx"; // Import SignUp page
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import { SessionContextProvider, useSession } from "./components/auth/SessionContextProvider.jsx";
 
 const queryClient = new QueryClient();
 
 // ProtectedRoute component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, isLoading } = useSession();
 
   if (isLoading) {

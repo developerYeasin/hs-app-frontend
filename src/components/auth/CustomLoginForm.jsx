@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 import { showError, showSuccess } from '@/utils/toast';
 
 const CustomLoginForm = () => {
@@ -14,7 +14,7 @@ const CustomLoginForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
@@ -26,7 +26,6 @@ const CustomLoginForm = () => {
       showError(error.message);
     } else {
       showSuccess('Logged in successfully!');
-      // The SessionContextProvider will detect the SIGNED_IN event and navigate to /admin/dashboard
     }
     setLoading(false);
   };

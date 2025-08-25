@@ -14,9 +14,7 @@ export default defineConfig(async () => ({
   },
   plugins: [
     (await import("@dyad-sh/react-vite-component-tagger")).default(),
-    react({
-      jsxImportSource: "react" // Explicitly tell SWC to use React's JSX runtime
-    })
+    react() // Removed jsxImportSource as it's not needed for JSX files
   ],
   resolve: {
     alias: {

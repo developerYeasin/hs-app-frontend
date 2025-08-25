@@ -2,21 +2,21 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import CustomLoginForm from '@/components/auth/CustomLoginForm'; // Import the new component
+import CustomSignUpForm from '@/components/auth/CustomSignUpForm.jsx'; // Import the new component
 
-const Login: React.FC = () => {
+const SignUp = () => {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)]">
       <Card className="w-full max-w-md p-4">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">Login to Admin Panel</CardTitle>
+          <CardTitle className="text-center text-2xl">Create an Account</CardTitle>
         </CardHeader>
         <CardContent>
-          <CustomLoginForm /> {/* Use the custom login form */}
+          <CustomSignUpForm /> {/* Use the custom sign-up form */}
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default Login;
+export default SignUp;

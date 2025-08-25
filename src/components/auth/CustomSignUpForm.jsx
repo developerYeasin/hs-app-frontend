@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 import { showError, showSuccess } from '@/utils/toast';
 
 const CustomSignUpForm = () => {
@@ -16,7 +16,7 @@ const CustomSignUpForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -30,7 +30,7 @@ const CustomSignUpForm = () => {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin + '/admin/dashboard', // Redirect after email confirmation
+        emailRedirectTo: window.location.origin + '/admin/dashboard',
       },
     });
 
@@ -38,7 +38,7 @@ const CustomSignUpForm = () => {
       showError(error.message);
     } else {
       showSuccess('Sign up successful! Please check your email to confirm your account.');
-      navigate('/login'); // Redirect to login after successful sign-up to await email confirmation
+      navigate('/login');
     }
     setLoading(false);
   };

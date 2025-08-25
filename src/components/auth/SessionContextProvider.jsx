@@ -1,22 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { showError } from '@/utils/toast';
 
-interface SessionContextType {
-  session: Session | null;
-  user: User | null;
-  isLoading: boolean;
-}
+const SessionContext = createContext(undefined);
 
-const SessionContext = createContext<SessionContextType | undefined>(undefined);
-
-export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+export const SessionContextProvider = ({ children }) => {
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,21 +19,20 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         setSession(currentSession);
         setUser(currentSession?.user || null);
-        if (location.pathname === '/login' || location.pathname === '/signup') { // Also check for signup page
-          navigate('/admin/dashboard'); // Redirect to admin dashboard after login/signup confirmation
+        if (location.pathname === '/login' || location.pathname === '/signup') {
+          navigate('/admin/dashboard');
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
         if (location.pathname.startsWith('/admin')) {
-          navigate('/login'); // Redirect to login if signed out from a protected route
+          navigate('/login');
         }
       } else if (event === 'INITIAL_SESSION') {
         setSession(currentSession);
         setUser(currentSession?.user || null);
       } else if (event === 'AUTH_ERROR') {
-        // currentSession is actually the error object in this case
-        showError('Authentication error: ' + (currentSession as any)?.message || 'Unknown error');
+        showError('Authentication error: ' + (currentSession?.message || 'Unknown error'));
       }
       setIsLoading(false);
     });
