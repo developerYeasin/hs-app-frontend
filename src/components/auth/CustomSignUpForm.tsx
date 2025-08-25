@@ -59,57 +59,63 @@ const CustomSignUpForm: React.FC = () => {
           disabled={loading}
         />
       </div>
-      <div className="grid gap-2 relative">
+      <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type={showPassword ? 'text' : 'password'}
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute right-0 top-0 mt-7 mr-1 h-8 w-8 p-0"
-          onClick={() => setShowPassword(!showPassword)}
-          disabled={loading}
-        >
-          {showPassword ? (
-            <EyeOff className="h-4 w-4" />
-          ) : (
-            <Eye className="h-4 w-4" />
-          )}
-          <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
-        </Button>
+        <div className="relative"> {/* New wrapper for input and button */}
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            className="pr-10" {/* Added padding-right */}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0" {/* Adjusted positioning */}
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={loading}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+            <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+          </Button>
+        </div>
       </div>
-      <div className="grid gap-2 relative">
+      <div className="grid gap-2">
         <Label htmlFor="confirm-password">Confirm Password</Label>
-        <Input
-          id="confirm-password"
-          type={showConfirmPassword ? 'text' : 'password'}
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          disabled={loading}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute right-0 top-0 mt-7 mr-1 h-8 w-8 p-0"
-          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          disabled={loading}
-        >
-          {showConfirmPassword ? (
-            <EyeOff className="h-4 w-4" />
-          ) : (
-            <Eye className="h-4 w-4" />
-          )}
-          <span className="sr-only">{showConfirmPassword ? 'Hide password' : 'Show password'}</span>
-        </Button>
+        <div className="relative"> {/* New wrapper for input and button */}
+          <Input
+            id="confirm-password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+            className="pr-10" {/* Added padding-right */}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute inset-y-0 right-0 my-auto mr-1 h-8 w-8 p-0" {/* Adjusted positioning */}
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            disabled={loading}
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+            <span className="sr-only">{showConfirmPassword ? 'Hide password' : 'Show password'}</span>
+          </Button>
+        </div>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? 'Signing up...' : 'Sign Up'}
