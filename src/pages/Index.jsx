@@ -6,6 +6,8 @@ import { Download } from "lucide-react";
 import { v4 as uuidv4 } from "uuid"; // Import uuid for generating unique client_id
 
 const Index = () => {
+  console.log("Index component is rendering!"); // Added for debugging
+
   const handleInstallClick = () => {
     const clientId = uuidv4(); // Generate a unique ID for this installation
     // Redirect to the install-hubspot edge function, passing the generated client_id
