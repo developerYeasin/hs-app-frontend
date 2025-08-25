@@ -23,7 +23,7 @@ const Login: React.FC = () => {
                 default: {
                   colors: {
                     brand: 'hsl(var(--primary))',
-                    brandAccent: 'hsl(var(--primary-foreground))',
+                    brandAccent: 'hsl(var(--foreground))', // Changed to foreground for better contrast on hover
                   },
                 },
               },
