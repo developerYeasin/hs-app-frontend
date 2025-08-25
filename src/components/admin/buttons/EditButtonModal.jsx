@@ -80,7 +80,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
           <div className="grid gap-2">
             <Label htmlFor="card-select">Select Card</Label>
             <Select onValueChange={setSelectedCardId} value={selectedCardId} disabled={isLoadingCards || loading}>
-              <SelectTrigger id="card-select" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+              <SelectTrigger id="card-select" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent w-full">
                 {isLoadingCards ? (
                   <span className="text-muted-foreground">Loading cards...</span>
                 ) : (
