@@ -72,7 +72,7 @@ const ManageCards = () => {
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-2xl">Manage Cards</CardTitle>
-          <Button onClick={() => setIsAddModalOpen(true)} className="py-2.5">
+          <Button onClick={() => setIsAddModalOpen(true)} className="py-2.5 px-4 flex items-center">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Card
           </Button>
         </CardHeader>
