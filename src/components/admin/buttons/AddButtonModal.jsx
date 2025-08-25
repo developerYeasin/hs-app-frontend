@@ -90,7 +90,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed inset-0 z-50 flex items-center justify-center max-w-md p-6 rounded-lg shadow-xl">
+      <DialogContent className="max-w-md p-6 rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle>Add New Button</DialogTitle>
           <DialogDescription>
