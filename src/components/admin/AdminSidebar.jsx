@@ -65,7 +65,7 @@ const AdminSidebar = () => {
       {user && (
         <Button
           variant="ghost"
-          className="w-full justify-start mt-auto flex items-center" {/* Added flex items-center here */}
+          className="w-full justify-start mt-auto flex items-center"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
