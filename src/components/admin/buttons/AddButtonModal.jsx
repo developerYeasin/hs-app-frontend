@@ -9,21 +9,15 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose, // Import DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Select from 'react-select'; // Import react-select
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react"; // Import X icon
+import { X } from "lucide-react";
 
 const fetchCardsForSelect = async () => {
   const { data, error } = await supabase
@@ -36,7 +30,7 @@ const fetchCardsForSelect = async () => {
 
 const AddButtonModal = ({ isOpen, onOpenChange }) => {
   const queryClient = useQueryClient();
-  const [selectedCardId, setSelectedCardId] = useState("");
+  const [selectedCard, setSelectedCard] = useState(null); // Store the selected card object
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,7 +41,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
     isError: isErrorCards,
     error: cardsError,
   } = useQuery({
-    queryKey: ["adminCards"], // This query is for the select dropdown
+    queryKey: ["adminCards"],
     queryFn: fetchCardsForSelect,
   });
 
@@ -61,7 +55,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!selectedCardId) {
+    if (!selectedCard) {
       showError("Please select a card.");
       setLoading(false);
       return;
@@ -69,7 +63,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
 
     const { error } = await supabase.from("buttons").insert([
       {
-        card_id: selectedCardId,
+        card_id: selectedCard.value, // Use the value from the react-select object
         button_text: buttonText,
         button_url: buttonUrl,
       },
@@ -79,14 +73,17 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
       showError("Failed to add button: " + error.message);
     } else {
       showSuccess("Button added successfully!");
-      setSelectedCardId("");
+      setSelectedCard(null); // Clear selected card
       setButtonText("");
       setButtonUrl("");
-      queryClient.invalidateQueries(["adminButtonsList"]); // Invalidate to refetch the list in ManageButtons
-      onOpenChange(false); // Close the modal
+      queryClient.invalidateQueries(["adminButtonsList"]);
+      onOpenChange(false);
     }
     setLoading(false);
   };
+
+  // Transform cards data for react-select
+  const cardOptions = cards?.map(card => ({ value: card.id, label: card.title })) || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -102,43 +99,50 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
           <div className="grid gap-2">
             <Label htmlFor="card-select">Select Card</Label>
             <Select
-              onValueChange={setSelectedCardId}
-              value={selectedCardId}
-              disabled={isLoadingCards || loading}
-            >
-              <SelectTrigger
-                id="card-select"
-                className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent w-full"
-              >
-                {isLoadingCards ? (
-                  <span className="text-muted-foreground">
-                    Loading cards...
-                  </span>
-                ) : (
-                  <SelectValue placeholder="Select a card" className="w-full" />
-                )}
-              </SelectTrigger>
-              <SelectContent
-                className="rounded-md shadow-md border border-input bg-popover text-popover-foreground" // Updated styling here
-                position="popper"
-              >
-                {cards?.length === 0 && !isLoadingCards ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No cards available. Add a card first.
-                  </div>
-                ) : (
-                  cards?.map((card) => (
-                    <SelectItem
-                      key={card.id}
-                      value={card.id}
-                      className="w-full"
-                    >
-                      {card.title}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+              id="card-select"
+              options={cardOptions}
+              value={selectedCard}
+              onChange={setSelectedCard}
+              isLoading={isLoadingCards}
+              isDisabled={isLoadingCards || loading}
+              placeholder="Select a card"
+              className="react-select-container"
+              classNamePrefix="react-select"
+              styles={{
+                control: (baseStyles, state) => ({
+                  ...baseStyles,
+                  borderColor: state.isFocused ? 'hsl(var(--primary))' : 'hsl(var(--input))',
+                  boxShadow: state.isFocused ? '0 0 0 1px hsl(var(--primary))' : 'none',
+                  '&:hover': {
+                    borderColor: state.isFocused ? 'hsl(var(--primary))' : 'hsl(var(--input))',
+                  },
+                  borderRadius: '0.375rem', // Tailwind's rounded-md
+                  minHeight: '2.5rem', // Tailwind's h-10
+                }),
+                menu: (baseStyles) => ({
+                  ...baseStyles,
+                  borderRadius: '0.375rem',
+                  border: '1px solid hsl(var(--border))',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', // Tailwind's shadow-md
+                }),
+                option: (baseStyles, state) => ({
+                  ...baseStyles,
+                  backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'transparent',
+                  color: state.isFocused ? 'hsl(var(--accent-foreground))' : 'hsl(var(--foreground))',
+                  '&:active': {
+                    backgroundColor: 'hsl(var(--accent))',
+                  },
+                }),
+                singleValue: (baseStyles) => ({
+                  ...baseStyles,
+                  color: 'hsl(var(--foreground))',
+                }),
+                placeholder: (baseStyles) => ({
+                  ...baseStyles,
+                  color: 'hsl(var(--muted-foreground))',
+                }),
+              }}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="button-text">Button Text</Label>
@@ -167,7 +171,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || !selectedCardId}>
+            <Button type="submit" disabled={loading || !selectedCard}>
               {loading ? "Adding Button..." : "Add Button"}
             </Button>
           </DialogFooter>
