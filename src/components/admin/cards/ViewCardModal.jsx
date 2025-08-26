@@ -1,12 +1,13 @@
 "use client";
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog'; // Import DialogClose
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError } from '@/utils/toast';
+import { X } from "lucide-react"; // Import X icon
 
 const fetchCardWithButtons = async (cardId) => {
   const { data, error } = await supabase
@@ -96,6 +97,10 @@ const ViewCardModal = ({ isOpen, onOpenChange, cardId }) => {
         ) : (
           <div className="text-center text-muted-foreground py-4">No card data available.</div>
         )}
+        <DialogClose className="absolute right-[10px] top-[10px] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
       </DialogContent>
     </Dialog>
   );
