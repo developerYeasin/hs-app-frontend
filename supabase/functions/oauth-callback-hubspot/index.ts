@@ -99,22 +99,8 @@ serve(async (req) => {
       supabaseServiceRoleKey
     );
 
-    if (user_id) {
-      console.log('Checking if user_id exists:', user_id);
-      const { data: existingUser, error: userCheckError } = await supabaseClient
-        .from('auth.users') // Access auth schema directly with service role
-        .select('id')
-        .eq('id', user_id)
-        .single();
-
-      if (userCheckError || !existingUser) {
-        console.error(`User with ID ${user_id} not found in auth.users:`, userCheckError?.message);
-        user_id = null; 
-        console.warn('Proceeding with null user_id due to missing user in auth.users.');
-      } else {
-        console.log(`User with ID ${user_id} found.`);
-      }
-    }
+    // Removed the check against auth.users as per your request to avoid authorization issues.
+    // The user_id will be stored directly from the state parameter.
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
