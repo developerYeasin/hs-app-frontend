@@ -262,13 +262,21 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
               type="single"
               value={buttonType}
               onValueChange={setButtonType}
-              className="flex justify-start"
+              className="flex justify-start border rounded-md overflow-hidden"
               disabled={loading}
             >
-              <ToggleGroupItem value="url" aria-label="Toggle URL type" className="w-1/2">
+              <ToggleGroupItem
+                value="url"
+                aria-label="Toggle URL type"
+                className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-secondary data-[state=off]:text-secondary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=off]:hover:bg-secondary/80 data-[state=off]:hover:text-secondary-foreground rounded-none border-r last:border-r-0"
+              >
                 URL
               </ToggleGroupItem>
-              <ToggleGroupItem value="webhook" aria-label="Toggle Webhook type" className="w-1/2">
+              <ToggleGroupItem
+                value="webhook"
+                aria-label="Toggle Webhook type"
+                className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-secondary data-[state=off]:text-secondary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=off]:hover:bg-secondary/80 data-[state=off]:hover:text-secondary-foreground rounded-none"
+              >
                 Webhook
               </ToggleGroupItem>
             </ToggleGroup>
