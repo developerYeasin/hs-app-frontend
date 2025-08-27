@@ -47,10 +47,10 @@ serve(async (req) => {
     }
 
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
-    const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET');
+    const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET'); // Changed to CLIENT_SECRET
     const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
-    if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
+    if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) { // Changed to CLIENT_SECRET
       throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
     }
 
@@ -62,7 +62,7 @@ serve(async (req) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: HUBSPOT_CLIENT_ID,
-        client_secret: HUBSPOT_CLIENT_SECRET,
+        client_secret: CLIENT_SECRET, // Changed to CLIENT_SECRET
         redirect_uri: HUBSPOT_REDIRECT_URI,
         code: code,
       }).toString(),
