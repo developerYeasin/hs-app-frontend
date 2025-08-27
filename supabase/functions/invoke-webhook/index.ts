@@ -4,7 +4,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS', // Allow POST for invoking
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+// Helper to map objectTypeId to objectType string
+const getHubspotObjectType = (objectTypeId: string): string | null => {
+  switch (objectTypeId) {
+    case '0-1':
+      return 'contacts';
+    // Add other mappings if needed
+    default:
+      return null;
+  }
 };
 
 serve(async (req) => {
@@ -14,6 +25,7 @@ serve(async (req) => {
 
   try {
     const { webhookId, dynamicData } = await req.json();
+    const { objectId, objectTypeId, hub_id } = dynamicData || {}; // Extract new fields
 
     if (!webhookId) {
       return new Response(JSON.stringify({ error: 'webhookId is required' }), {
@@ -21,14 +33,109 @@ serve(async (req) => {
         status: 400,
       });
     }
+    if (!hub_id) {
+      return new Response(JSON.stringify({ error: 'hub_id is required in dynamicData' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); // Use service role key for secure access
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
+    const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET');
+    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
-    const supabaseClient = createClient(
-      supabaseUrl ?? '',
-      supabaseServiceRoleKey ?? ''
-    );
+    if (!supabaseUrl || !supabaseServiceRoleKey || !HUBSPOT_CLIENT_ID || !CLIENT_SECRET) {
+      throw new Error('Missing required environment variables for Supabase or HubSpot.');
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // 1. Retrieve client data by hub_id
+    let { data: clientData, error: clientError } = await supabaseClient
+      .from('client')
+      .select('id, accessToken, refresh_token, expires_at')
+      .eq('hub_id', hub_id)
+      .single();
+
+    if (clientError || !clientData) {
+      console.error('Error fetching client data by hub_id:', clientError);
+      return new Response(JSON.stringify({ error: `HubSpot integration not found for hub_id: ${hub_id}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
+
+    let currentAccessToken = clientData.accessToken;
+    const refreshToken = clientData.refresh_token;
+    let expiresAt = new Date(clientData.expires_at);
+
+    // 2. Token Refresh Logic
+    if (expiresAt < new Date()) {
+      console.log('Access token expired, refreshing...');
+      const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: HUBSPOT_CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          redirect_uri: HUBSPOT_REDIRECT_URI,
+          refresh_token: refreshToken,
+        }).toString(),
+      });
+
+      if (!refreshResponse.ok) {
+        const errorData = await refreshResponse.json();
+        console.error('Failed to refresh access token:', errorData);
+        throw new Error(`Failed to refresh access token: ${errorData.message || JSON.stringify(errorData)}`);
+      }
+
+      const newTokens = await refreshResponse.json();
+      currentAccessToken = newTokens.access_token;
+      expiresAt = new Date(Date.now() + (newTokens.expires_in * 1000));
+
+      // Update tokens in Supabase
+      const { error: updateError } = await supabaseClient
+        .from('client')
+        .update({
+          accessToken: currentAccessToken,
+          refresh_token: newTokens.refresh_token || refreshToken,
+          expires_at: expiresAt.toISOString(),
+        })
+        .eq('id', clientData.id);
+
+      if (updateError) {
+        console.error('Supabase update error after token refresh:', updateError);
+        throw new Error(`Failed to update tokens in database: ${updateError.message}`);
+      }
+    }
+
+    // 3. Fetch Contact Details if objectId and objectTypeId are provided
+    let contactDetails = null;
+    if (objectId && objectTypeId) {
+      const objectType = getHubspotObjectType(objectTypeId);
+      if (!objectType) {
+        console.warn(`Unsupported objectTypeId: ${objectTypeId}`);
+      } else {
+        const hubspotContactResponse = await fetch(`https://api.hubapi.com/crm/v3/objects/${objectType}/${objectId}`, {
+          headers: {
+            'Authorization': `Bearer ${currentAccessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!hubspotContactResponse.ok) {
+          const errorData = await hubspotContactResponse.json();
+          console.error(`Failed to fetch contact ${objectId} from HubSpot:`, errorData);
+          throw new Error(`Failed to fetch contact ${objectId} from HubSpot: ${errorData.message || JSON.stringify(errorData)}`);
+        }
+        contactDetails = await hubspotContactResponse.json();
+      }
+    }
 
     // Fetch webhook details from the database
     const { data: webhook, error: fetchError } = await supabaseClient
@@ -46,11 +153,25 @@ serve(async (req) => {
     }
 
     let requestBody = webhook.body_template;
-    if (requestBody && dynamicData) {
-      // Simple placeholder replacement for {{key}} in body_template
-      for (const key in dynamicData) {
-        requestBody = requestBody.replace(new RegExp(`{{${key}}}`, 'g'), dynamicData[key]);
+    if (requestBody) {
+      // Replace dynamicData placeholders
+      if (dynamicData) {
+        for (const key in dynamicData) {
+          requestBody = requestBody.replace(new RegExp(`{{${key}}}`, 'g'), dynamicData[key]);
+        }
       }
+      // Replace contactDetails placeholders
+      if (contactDetails && contactDetails.properties) {
+        for (const key in contactDetails.properties) {
+          requestBody = requestBody.replace(new RegExp(`{{contact.${key}}}`, 'g'), contactDetails.properties[key]);
+        }
+        // Also replace top-level contact details like id
+        requestBody = requestBody.replace(new RegExp(`{{contact.id}}`, 'g'), contactDetails.id);
+      }
+      // Replace other common placeholders
+      requestBody = requestBody.replace(new RegExp(`{{objectId}}`, 'g'), objectId || '');
+      requestBody = requestBody.replace(new RegExp(`{{objectTypeId}}`, 'g'), objectTypeId || '');
+      requestBody = requestBody.replace(new RegExp(`{{hub_id}}`, 'g'), hub_id || '');
     }
 
     const externalResponse = await fetch(webhook.url, {
@@ -59,7 +180,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         // Add any other headers required by the external webhook, e.g., Authorization
       },
-      body: requestBody ? requestBody : undefined, // Only send body if it exists
+      body: requestBody ? requestBody : undefined,
     });
 
     if (!externalResponse.ok) {

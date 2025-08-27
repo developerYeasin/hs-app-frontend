@@ -47,10 +47,10 @@ serve(async (req) => {
     }
 
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
-    const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET'); // Changed to CLIENT_SECRET
+    const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET');
     const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
-    if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) { // Changed to CLIENT_SECRET
+    if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) {
       throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
     }
 
@@ -62,7 +62,7 @@ serve(async (req) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: HUBSPOT_CLIENT_ID,
-        client_secret: CLIENT_SECRET, // Changed to CLIENT_SECRET
+        client_secret: CLIENT_SECRET,
         redirect_uri: HUBSPOT_REDIRECT_URI,
         code: code,
       }).toString(),
@@ -75,10 +75,31 @@ serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
+    // --- NEW: Fetch hub_id from HubSpot using the new access token ---
+    const hubspotMeResponse = await fetch(`https://api.hubapi.com/oauth/v1/access-tokens/${tokens.access_token}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (!hubspotMeResponse.ok) {
+      const errorData = await hubspotMeResponse.json();
+      console.error('Failed to fetch HubSpot hub_id:', errorData);
+      throw new Error(`Failed to fetch HubSpot hub_id: ${errorData.message || JSON.stringify(errorData)}`);
+    }
+
+    const hubspotMeData = await hubspotMeResponse.json();
+    const hub_id = hubspotMeData.hub_id;
+
+    if (!hub_id) {
+      throw new Error('Hub ID not found in HubSpot access token response.');
+    }
+    // --- END NEW ---
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Robust checks for Supabase environment variables
     if (!supabaseUrl || supabaseUrl === '') {
       console.error('SUPABASE_URL environment variable is missing or empty in oauth-callback-hubspot.');
       return new Response(JSON.stringify({ error: 'Supabase URL environment variable is missing or empty.' }), {
@@ -99,9 +120,6 @@ serve(async (req) => {
       supabaseServiceRoleKey
     );
 
-    // Removed the check against auth.users as per your request to avoid authorization issues.
-    // The user_id will be stored directly from the state parameter.
-
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
     const upsertData = {
@@ -112,6 +130,7 @@ serve(async (req) => {
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt.toISOString(),
       user_id: user_id,
+      hub_id: hub_id, // --- NEW: Store hub_id ---
     };
 
     const { data, error } = await supabaseClient
@@ -127,7 +146,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://hsmini.netlify.app/thank-you`, // Redirect to the specified Netlify URL
+        'Location': `https://hsmini.netlify.app/thank-you`,
         ...corsHeaders,
       },
     });
