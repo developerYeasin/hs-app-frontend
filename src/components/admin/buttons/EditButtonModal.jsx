@@ -5,8 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select as ShadcnSelect, // Renamed to avoid conflict with react-select
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"; // Import ToggleGroup
+import Select from 'react-select'; // Import react-select
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -36,14 +43,56 @@ const fetchQueryParamsForSelect = async () => {
   return data;
 };
 
+const customStyles = {
+  control: (baseStyles, state) => ({
+    ...baseStyles,
+    borderColor: state.isFocused ? 'hsl(var(--primary))' : 'hsl(var(--input))',
+    boxShadow: state.isFocused ? '0 0 0 1px hsl(var(--primary))' : 'none',
+    '&:hover': {
+      borderColor: state.isFocused ? 'hsl(var(--primary))' : 'hsl(var(--input))',
+    },
+    borderRadius: '0.375rem', // Tailwind's rounded-md
+    minHeight: '2.5rem', // Tailwind's h-10
+    backgroundColor: 'hsl(var(--background))',
+    color: 'hsl(var(--foreground))',
+  }),
+  menu: (baseStyles) => ({
+    ...baseStyles,
+    borderRadius: '0.375rem',
+    border: '1px solid hsl(var(--border))',
+    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', // Tailwind's shadow-md
+    backgroundColor: 'hsl(var(--popover))',
+  }),
+  option: (baseStyles, state) => ({
+    ...baseStyles,
+    backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'transparent',
+    color: state.isFocused ? 'hsl(var(--accent-foreground))' : 'hsl(var(--foreground))',
+    '&:active': {
+      backgroundColor: 'hsl(var(--accent))',
+    },
+  }),
+  singleValue: (baseStyles) => ({
+    ...baseStyles,
+    color: 'hsl(var(--foreground))',
+  }),
+  placeholder: (baseStyles) => ({
+    ...baseStyles,
+    color: 'hsl(var(--muted-foreground))',
+  }),
+  input: (baseStyles) => ({
+    ...baseStyles,
+    color: 'hsl(var(--foreground))',
+  }),
+};
+
 const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   const queryClient = useQueryClient();
-  const [selectedCardId, setSelectedCardId] = useState(button?.card_id || '');
+  const [selectedCard, setSelectedCard] = useState(null);
   const [buttonText, setButtonText] = useState(button?.button_text || '');
   const [buttonType, setButtonType] = useState(button?.type || 'url');
   const [buttonUrl, setButtonUrl] = useState(button?.button_url || '');
   const [queries, setQueries] = useState(button?.queries || [{ key: "", value: "" }]);
-  const [selectedWebhookId, setSelectedWebhookId] = useState(button?.webhook_id || '');
+  const [selectedWebhook, setSelectedWebhook] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const { data: cards, isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery({
@@ -72,15 +121,23 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   });
 
   useEffect(() => {
-    if (button) {
-      setSelectedCardId(button.card_id || '');
+    if (button && cards) {
+      const initialCard = cards.find(card => card.id === button.card_id);
+      if (initialCard) {
+        setSelectedCard({ value: initialCard.id, label: initialCard.title });
+      }
       setButtonText(button.button_text || '');
       setButtonType(button.type || 'url');
       setButtonUrl(button.button_url || '');
       setQueries(button.queries && button.queries.length > 0 ? button.queries : [{ key: "", value: "" }]);
-      setSelectedWebhookId(button.webhook_id || '');
+      if (button.webhook_id && webhooks) {
+        const initialWebhook = webhooks.find(wh => wh.id === button.webhook_id);
+        if (initialWebhook) {
+          setSelectedWebhook({ value: initialWebhook.id, label: `${initialWebhook.name} (${initialWebhook.method})`, url: initialWebhook.url, method: initialWebhook.method });
+        }
+      }
     }
-  }, [button]);
+  }, [button, cards, webhooks]); // Depend on 'cards' and 'webhooks' to ensure they are loaded
 
   React.useEffect(() => {
     if (isErrorCards) {
@@ -114,14 +171,14 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!selectedCardId) {
+    if (!selectedCard) {
       showError('Please select a card.');
       setLoading(false);
       return;
     }
 
     let updateData = {
-      card_id: selectedCardId,
+      card_id: selectedCard.value,
       button_text: buttonText,
       type: buttonType,
     };
@@ -131,12 +188,12 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
       updateData.queries = queries.filter(q => q.key && q.value);
       updateData.webhook_id = null;
     } else { // buttonType === "webhook"
-      if (!selectedWebhookId) {
+      if (!selectedWebhook) {
         showError("Please select a webhook.");
         setLoading(false);
         return;
       }
-      updateData.webhook_id = selectedWebhookId;
+      updateData.webhook_id = selectedWebhook.value;
       updateData.button_url = null;
       updateData.queries = [];
     }
@@ -156,7 +213,11 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     setLoading(false);
   };
 
-  const currentWebhook = webhooks?.find(wh => wh.id === selectedWebhookId);
+  const cardOptions = cards?.map(card => ({ value: card.id, label: card.title })) || [];
+  const webhookOptions = webhooks?.map(webhook => ({ value: webhook.id, label: `${webhook.name} (${webhook.method})`, url: webhook.url, method: webhook.method })) || [];
+  const queryParamOptions = queryParams?.map(param => ({ value: param.name, label: param.name })) || [];
+
+  const currentWebhookDetails = selectedWebhook ? webhooks?.find(wh => wh.id === selectedWebhook.value) : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -170,29 +231,16 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="card-select">Select Card</Label>
-            <Select onValueChange={setSelectedCardId} value={selectedCardId} disabled={isLoadingCards || loading}>
-              <SelectTrigger id="card-select" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent w-full">
-                {isLoadingCards ? (
-                  <span className="text-muted-foreground">Loading cards...</span>
-                ) : (
-                  <SelectValue placeholder="Select a card" className="w-full" />
-                )}
-              </SelectTrigger>
-              <SelectContent
-                className="rounded-md shadow-md border border-input bg-popover text-popover-foreground"
-                position="popper"
-              >
-                {cards?.length === 0 && !isLoadingCards ? (
-                  <div className="p-2 text-sm text-muted-foreground">No cards available. Add a card first.</div>
-                ) : (
-                  cards?.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.title}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Select
+              id="card-select"
+              options={cardOptions}
+              value={selectedCard}
+              onChange={setSelectedCard}
+              isLoading={isLoadingCards}
+              isDisabled={isLoadingCards || loading}
+              placeholder="Select a card"
+              styles={customStyles}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="button-text">Button Text</Label>
@@ -210,21 +258,20 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
 
           <div className="grid gap-2">
             <Label>Button Type</Label>
-            <RadioGroup
+            <ToggleGroup
+              type="single"
               value={buttonType}
               onValueChange={setButtonType}
-              className="flex space-x-4"
+              className="flex justify-start"
               disabled={loading}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="url" id="type-url-edit" />
-                <Label htmlFor="type-url-edit">URL</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="webhook" id="type-webhook-edit" />
-                <Label htmlFor="type-webhook-edit">Webhook</Label>
-              </div>
-            </RadioGroup>
+              <ToggleGroupItem value="url" aria-label="Toggle URL type" className="w-1/2">
+                URL
+              </ToggleGroupItem>
+              <ToggleGroupItem value="webhook" aria-label="Toggle Webhook type" className="w-1/2">
+                Webhook
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           {buttonType === "url" && (
@@ -248,29 +295,15 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
                 {queries.map((query, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <Select
-                      onValueChange={(value) => handleQueryChange(index, "key", value)}
-                      value={query.key}
-                      disabled={isLoadingQueryParams || loading}
-                    >
-                      <SelectTrigger className="w-1/2 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
-                        {isLoadingQueryParams ? (
-                          <span className="text-muted-foreground">Loading keys...</span>
-                        ) : (
-                          <SelectValue placeholder="Select Key" />
-                        )}
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md shadow-md border border-input bg-popover text-popover-foreground">
-                        {queryParams?.length === 0 && !isLoadingQueryParams ? (
-                          <div className="p-2 text-sm text-muted-foreground">No query params available.</div>
-                        ) : (
-                          queryParams?.map((param) => (
-                            <SelectItem key={param.id} value={param.name}>
-                              {param.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                      options={queryParamOptions}
+                      value={queryParamOptions.find(option => option.value === query.key)}
+                      onChange={(selectedOption) => handleQueryChange(index, "key", selectedOption ? selectedOption.value : "")}
+                      isLoading={isLoadingQueryParams}
+                      isDisabled={isLoadingQueryParams || loading}
+                      placeholder="Select Key"
+                      styles={customStyles}
+                      className="w-1/2"
+                    />
                     <Input
                       type="text"
                       placeholder="Value"
@@ -307,54 +340,26 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
             <div className="grid gap-2">
               <Label htmlFor="webhook-select">Select Webhook</Label>
               <Select
-                onValueChange={setSelectedWebhookId}
-                value={selectedWebhookId}
-                disabled={isLoadingWebhooks || loading}
-              >
-                <SelectTrigger
-                  id="webhook-select"
-                  className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent w-full"
-                >
-                  {isLoadingWebhooks ? (
-                    <span className="text-muted-foreground">
-                      Loading webhooks...
-                    </span>
-                  ) : (
-                    <SelectValue placeholder="Select a webhook" className="w-full" />
-                  )}
-                </SelectTrigger>
-                <SelectContent
-                  className="rounded-md shadow-md border border-input bg-popover text-popover-foreground"
-                  position="popper"
-                >
-                  {webhooks?.length === 0 && !isLoadingWebhooks ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No webhooks available.
-                    </div>
-                  ) : (
-                    webhooks?.map((webhook) => (
-                      <SelectItem
-                        key={webhook.id}
-                        value={webhook.id}
-                        className="w-full"
-                      >
-                        {webhook.name} ({webhook.method})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {currentWebhook && (
+                id="webhook-select"
+                options={webhookOptions}
+                value={selectedWebhook}
+                onChange={setSelectedWebhook}
+                isLoading={isLoadingWebhooks}
+                isDisabled={isLoadingWebhooks || loading}
+                placeholder="Select a webhook"
+                styles={customStyles}
+              />
+              {currentWebhookDetails && (
                 <div className="mt-2 p-3 text-sm bg-muted rounded-md text-muted-foreground">
-                  <p><strong>URL:</strong> {currentWebhook.url}</p>
-                  <p><strong>Method:</strong> {currentWebhook.method}</p>
+                  <p><strong>URL:</strong> {currentWebhookDetails.url}</p>
+                  <p><strong>Method:</strong> {currentWebhookDetails.method}</p>
                 </div>
               )}
             </div>
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={loading || !selectedCardId || (buttonType === "url" && !buttonUrl) || (buttonType === "webhook" && !selectedWebhookId)}>
+            <Button type="submit" disabled={loading || !selectedCard || (buttonType === "url" && !buttonUrl) || (buttonType === "webhook" && !selectedWebhook)}>
               {loading ? 'Saving changes...' : 'Save changes'}
             </Button>
           </DialogFooter>
