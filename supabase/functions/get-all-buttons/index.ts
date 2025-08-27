@@ -13,13 +13,14 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); // Use service role key
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase URL or Anon Key environment variables not set.');
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error('Supabase URL or Service Role Key environment variables not set.');
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    // Create Supabase client with the service role key to bypass RLS
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const { data: buttons, error } = await supabaseClient
       .from('buttons')
