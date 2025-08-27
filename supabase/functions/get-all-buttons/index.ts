@@ -23,7 +23,7 @@ serve(async (req) => {
 
     const { data: buttons, error } = await supabaseClient
       .from('buttons')
-      .select('*, cards(title)') // Select all button fields and the title from the associated card
+      .select('*, cards(title), webhooks(name, url, method)') // Select all button fields, card title, and webhook details
       .order('created_at', { ascending: false });
 
     if (error) {

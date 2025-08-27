@@ -34,7 +34,7 @@ import {
 const fetchButtons = async () => {
   const { data, error } = await supabase
     .from("buttons")
-    .select("*, cards(title)") // Select buttons and join with cards table to get card title
+    .select("*, cards(title), webhooks(name, url, method)") // Select buttons and join with cards and webhooks table
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
@@ -123,7 +123,8 @@ const ManageButtons = () => {
                   <TableHead>ID</TableHead>
                   <TableHead>Card Title</TableHead>
                   <TableHead>Button Text</TableHead>
-                  <TableHead>Button URL</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Destination</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -136,8 +137,9 @@ const ManageButtons = () => {
                     </TableCell>
                     <TableCell>{button.cards?.title || "N/A"}</TableCell>
                     <TableCell>{button.button_text}</TableCell>
+                    <TableCell className="capitalize">{button.type}</TableCell>
                     <TableCell className="text-xs truncate max-w-[150px]">
-                      {button.button_url}
+                      {button.type === 'url' ? button.button_url : button.webhooks?.name || 'N/A'}
                     </TableCell>
                     <TableCell>
                       {new Date(button.created_at).toLocaleDateString()}
@@ -219,7 +221,7 @@ const ManageButtons = () => {
         <ViewButtonModal
           isOpen={isViewModalOpen}
           onOpenChange={setIsViewModalOpen}
-          buttonId={selectedButton.id}
+          button={selectedButton} // Pass the entire button object
         />
       )}
     </div>

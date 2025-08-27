@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { LayoutDashboard, CreditCard, List, LogOut, Users } from 'lucide-react'; // Import Users icon
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { LayoutDashboard, CreditCard, List, LogOut, Users } from "lucide-react"; // Import Users icon
+import { cn } from "@/lib/utils";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
@@ -16,23 +16,23 @@ const AdminSidebar = () => {
 
   const navItems = [
     {
-      name: 'Dashboard',
-      path: '/admin/dashboard',
+      name: "Dashboard",
+      path: "/admin/dashboard",
       icon: <LayoutDashboard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Manage Cards',
-      path: '/admin/cards',
+      name: "Manage Cards",
+      path: "/admin/cards",
       icon: <CreditCard className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'Manage Buttons',
-      path: '/admin/buttons',
+      name: "Manage Buttons",
+      path: "/admin/buttons",
       icon: <List className="mr-2 h-4 w-4" />,
     },
     {
-      name: 'HubSpot Contacts', // New item for Contacts
-      path: '/admin/contacts',
+      name: "HubSpot Contacts", // New item for Contacts
+      path: "/admin/contacts",
       icon: <Users className="mr-2 h-4 w-4" />,
     },
   ];
@@ -40,10 +40,10 @@ const AdminSidebar = () => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      showError('Logout failed: ' + error.message);
+      showError("Logout failed: " + error.message);
     } else {
-      showSuccess('Logged out successfully!');
-      navigate('/login');
+      showSuccess("Logged out successfully!");
+      navigate("/login");
     }
   };
 
@@ -56,7 +56,8 @@ const AdminSidebar = () => {
             variant="ghost"
             className={cn(
               "w-full justify-start",
-              location.pathname === item.path && "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90"
+              location.pathname === item.path &&
+                "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90"
             )}
             asChild
           >
