@@ -78,12 +78,25 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    console.log('Supabase URL (oauth-callback-hubspot):', supabaseUrl ? 'Set' : 'Not Set');
-    console.log('Supabase Service Role Key (oauth-callback-hubspot):', supabaseServiceRoleKey ? 'Set' : 'Not Set');
+    // Robust checks for Supabase environment variables
+    if (!supabaseUrl || supabaseUrl === '') {
+      console.error('SUPABASE_URL environment variable is missing or empty in oauth-callback-hubspot.');
+      return new Response(JSON.stringify({ error: 'Supabase URL environment variable is missing or empty.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+    if (!supabaseServiceRoleKey || supabaseServiceRoleKey === '') {
+      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is missing or empty in oauth-callback-hubspot.');
+      return new Response(JSON.stringify({ error: 'Supabase Service Role Key environment variable is missing or empty.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
 
     const supabaseClient = createClient(
-      supabaseUrl ?? '',
-      supabaseServiceRoleKey ?? ''
+      supabaseUrl,
+      supabaseServiceRoleKey
     );
 
     if (user_id) {
