@@ -20,14 +20,19 @@ const fetchContacts = async (clientId) => {
   const { data: { session } } = await supabase.auth.getSession();
   const accessToken = session?.access_token;
 
-  let url = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/get-hubspot-contacts`;
+  const baseUrl = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/get-hubspot-contacts`;
+  const urlParams = new URLSearchParams();
+  urlParams.append('apikey', supabaseAnonKey); // Always add anon key as URL param
+
   if (clientId) {
-    url += `?client_id=${clientId}`;
+    urlParams.append('client_id', clientId);
   }
+
+  const url = `${baseUrl}?${urlParams.toString()}`;
 
   const headers = {
     'Content-Type': 'application/json',
-    'apikey': supabaseAnonKey, // Add the Supabase anon key here
+    // Removed 'apikey' from headers as it's now in the URL
   };
 
   if (accessToken) {

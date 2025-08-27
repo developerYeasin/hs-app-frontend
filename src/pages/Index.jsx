@@ -68,12 +68,18 @@ const Index = () => {
     } else if (button.type === 'webhook') {
       try {
         showSuccess(`Invoking webhook: ${button.button_text}...`);
-        const response = await fetch('https://txfsspgkakryggiodgic.supabase.co/functions/v1/invoke-webhook', {
+        
+        const baseUrl = 'https://txfsspgkakryggiodgic.supabase.co/functions/v1/invoke-webhook';
+        const urlParams = new URLSearchParams();
+        urlParams.append('apikey', supabaseAnonKey); // Always add anon key as URL param
+        const url = `${baseUrl}?${urlParams.toString()}`;
+
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Pass user ID or anon for context if needed by webhook
-            'apikey': supabaseAnonKey, // Add the Supabase anon key here
+            // Removed 'apikey' from headers as it's now in the URL
           },
           body: JSON.stringify({
             webhookId: button.webhook_id,
