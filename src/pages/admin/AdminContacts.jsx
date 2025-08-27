@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError } from '@/utils/toast';
-import { supabase } from '@/integrations/supabase/client.js'; // Import supabase client
+import { supabase, supabaseAnonKey } from '@/integrations/supabase/client.js'; // Import supabaseAnonKey
 
 const fetchContacts = async (clientId) => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -27,6 +27,7 @@ const fetchContacts = async (clientId) => {
 
   const headers = {
     'Content-Type': 'application/json',
+    'apikey': supabaseAnonKey, // Add the Supabase anon key here
   };
 
   if (accessToken) {

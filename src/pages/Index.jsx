@@ -6,7 +6,7 @@ import { Download } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useSession } from "@/components/auth/SessionContextProvider.jsx";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client.js";
+import { supabase, supabaseAnonKey } from "@/integrations/supabase/client.js"; // Import supabaseAnonKey
 import { showError, showSuccess } from "@/utils/toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Import Card components
 
@@ -72,7 +72,8 @@ const Index = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user?.id ? user.id : 'anon'}` // Pass user ID or anon for context if needed by webhook
+            'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Pass user ID or anon for context if needed by webhook
+            'apikey': supabaseAnonKey, // Add the Supabase anon key here
           },
           body: JSON.stringify({
             webhookId: button.webhook_id,
