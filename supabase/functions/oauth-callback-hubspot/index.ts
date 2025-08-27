@@ -86,7 +86,6 @@ serve(async (req) => {
       supabaseServiceRoleKey ?? ''
     );
 
-    // --- Start of added diagnostic and handling block ---
     if (user_id) {
       console.log('Checking if user_id exists:', user_id);
       const { data: existingUser, error: userCheckError } = await supabaseClient
@@ -97,14 +96,12 @@ serve(async (req) => {
 
       if (userCheckError || !existingUser) {
         console.error(`User with ID ${user_id} not found in auth.users:`, userCheckError?.message);
-        // If user not found, set user_id to null to avoid FK violation
         user_id = null; 
         console.warn('Proceeding with null user_id due to missing user in auth.users.');
       } else {
         console.log(`User with ID ${user_id} found.`);
       }
     }
-    // --- End of added diagnostic and handling block ---
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
@@ -115,7 +112,7 @@ serve(async (req) => {
       sessionID: client_id,
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt.toISOString(),
-      user_id: user_id, // This will now be null if the user was not found
+      user_id: user_id,
     };
 
     const { data, error } = await supabaseClient
@@ -131,7 +128,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `/admin/contacts?client_id=${client_id}`, // Redirect to admin contacts page
+        'Location': `https://hsmini.netlify.app/thank-you`, // Redirect to the specified Netlify URL
         ...corsHeaders,
       },
     });
