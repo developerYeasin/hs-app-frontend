@@ -3,23 +3,96 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { v4 as uuidv4 } from "uuid"; // Import uuid for generating unique client_id
-import { useSession } from "@/components/auth/SessionContextProvider.jsx"; // Import useSession
+import { v4 as uuidv4 } from "uuid";
+import { useSession } from "@/components/auth/SessionContextProvider.jsx";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client.js";
+import { showError, showSuccess } from "@/utils/toast";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Import Card components
+
+const fetchCardsWithButtons = async () => {
+  const { data, error } = await supabase
+    .from("cards")
+    .select("*, buttons(*)") // Select cards and their associated buttons
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+};
 
 const Index = () => {
-  console.log("Index component is rendering!"); // Added for debugging
-  const { user } = useSession(); // Get the current user
+  console.log("Index component is rendering!");
+  const { user } = useSession();
+
+  const {
+    data: cards,
+    isLoading: isLoadingCards,
+    isError: isErrorCards,
+    error: cardsError,
+  } = useQuery({
+    queryKey: ["publicCards"],
+    queryFn: fetchCardsWithButtons,
+  });
+
+  React.useEffect(() => {
+    if (isErrorCards) {
+      showError("Failed to load content: " + cardsError.message);
+    }
+  }, [isErrorCards, cardsError]);
 
   const handleInstallClick = () => {
-    const clientId = uuidv4(); // Generate a unique ID for this installation
+    const clientId = uuidv4();
     const statePayload = { client_id: clientId };
 
     if (user) {
-      statePayload.user_id = user.id; // Add user_id if authenticated
+      statePayload.user_id = user.id;
     }
 
-    // Redirect to the install-hubspot edge function, passing the generated client_id and user_id (if any)
     window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientId}&state=${encodeURIComponent(JSON.stringify(statePayload))}`;
+  };
+
+  const handleButtonClick = async (button) => {
+    if (button.type === 'url') {
+      let url = button.button_url;
+      if (button.queries && button.queries.length > 0) {
+        const queryParams = new URLSearchParams();
+        button.queries.forEach(q => {
+          if (q.key && q.value) {
+            queryParams.append(q.key, q.value);
+          }
+        });
+        if (queryParams.toString()) {
+          url = `${url}?${queryParams.toString()}`;
+        }
+      }
+      window.open(url, '_blank');
+    } else if (button.type === 'webhook') {
+      try {
+        showSuccess(`Invoking webhook: ${button.button_text}...`);
+        const response = await fetch('https://txfsspgkakryggiodgic.supabase.co/functions/v1/invoke-webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user?.id ? user.id : 'anon'}` // Pass user ID or anon for context if needed by webhook
+          },
+          body: JSON.stringify({
+            webhookId: button.webhook_id,
+            dynamicData: button.queries ? Object.fromEntries(button.queries.map(q => [q.key, q.value])) : {},
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to invoke webhook');
+        }
+
+        const result = await response.json();
+        showSuccess(`Webhook "${button.button_text}" invoked successfully!`);
+        console.log('Webhook response:', result);
+      } catch (error) {
+        showError(`Error invoking webhook "${button.button_text}": ${error.message}`);
+        console.error('Webhook invocation error:', error);
+      }
+    }
   };
 
   return (
@@ -50,42 +123,70 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Existing Feature Section (now below the new hero) */}
+      {/* Dynamic Cards Section */}
       <section className="py-16 bg-background w-full">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="rounded-lg overflow-hidden shadow-lg bg-card text-card-foreground">
-              <img
-                src="https://media.istockphoto.com/id/2169549413/photo/puppy-and-kitten-cuddling.jpg?s=1024x1024&w=is&k=20&c=uwYJEO-LAa16OoGBtKVBWHDuZblkSQx4v6FZ5zPmymw="
-                alt="Easy Integration"
-                className="w-full h-64 object-cover"
-              />
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">Easy Integration</h3>
-                <p className="text-muted-foreground">
-                  Connect your HubSpot account in just a few clicks. Our secure
-                  process ensures your data is safe.
-                </p>
-              </div>
+          <h2 className="text-3xl font-bold text-center mb-12">Our Features</h2>
+          {isLoadingCards ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader>
+                    <div className="h-48 w-full bg-gray-200 rounded-md mb-4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-10 bg-gray-200 rounded w-1/2 mt-4 mx-auto"></div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            <div className="rounded-lg overflow-hidden shadow-lg bg-card text-card-foreground">
-              <img
-                src="https://cdn.pixabay.com/photo/2025/08/03/15/10/cat-9752539_960_720.jpg"
-                alt="Enhanced Productivity"
-                className="w-full h-64 object-cover"
-              />
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">
-                  Enhanced Productivity
-                </h3>
-                <p className="text-muted-foreground">
-                  Access your contacts and deal information directly, saving you
-                  time and effort.
-                </p>
-              </div>
+          ) : isErrorCards ? (
+            <div className="text-center text-red-500">
+              <p>Error loading features: {cardsError?.message}</p>
             </div>
-          </div>
+          ) : cards?.length === 0 ? (
+            <div className="text-center text-muted-foreground">
+              No features configured yet. Please add cards from the admin panel.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {cards?.map((card) => (
+                <Card key={card.id} className="rounded-lg overflow-hidden shadow-lg bg-card text-card-foreground flex flex-col">
+                  {card.image_url && (
+                    <img
+                      src={card.image_url}
+                      alt={card.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">{card.title}</CardTitle>
+                    {card.description && <CardDescription className="text-muted-foreground">{card.description}</CardDescription>}
+                  </CardHeader>
+                  <CardContent className="flex-grow flex flex-col justify-end">
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {card.buttons && card.buttons.length > 0 ? (
+                        card.buttons.map((button) => (
+                          <Button
+                            key={button.id}
+                            onClick={() => handleButtonClick(button)}
+                            className="px-4 py-2"
+                          >
+                            {button.button_text}
+                          </Button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No actions available.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
