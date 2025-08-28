@@ -91,7 +91,7 @@ const ManageCards = () => {
               setIsAddModalOpen(true);
             }}
             className="py-2.5 px-4 flex items-center"
-            disabled={true} // Removed disabled prop
+            disabled={true} // This button is now disabled
           >
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Card
           </Button>
