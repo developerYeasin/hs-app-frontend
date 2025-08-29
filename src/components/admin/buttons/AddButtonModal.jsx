@@ -14,13 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select as ShadcnSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Removed shadcn/ui Select imports as they are no longer needed for API Method
 import Select from 'react-select';
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
@@ -92,7 +86,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [buttonText, setButtonText] = useState("");
   const [apiUrl, setApiUrl] = useState("");
-  const [apiMethod, setApiMethod] = useState("POST"); // Default to POST
+  const [apiMethod, setApiMethod] = useState({ value: "POST", label: "POST" }); // Default to POST, react-select format
   const [apiBodyTemplate, setApiBodyTemplate] = useState("");
   const [queries, setQueries] = useState([{ key: "", value: "" }]);
   const [loading, setLoading] = useState(false);
@@ -156,12 +150,12 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
       card_id: selectedCard.value,
       button_text: buttonText,
       api_url: apiUrl,
-      api_method: apiMethod,
+      api_method: apiMethod.value, // Use .value for the actual method string
       queries: [],
       api_body_template: null,
     };
 
-    if (apiMethod.toUpperCase() === "GET") {
+    if (apiMethod.value.toUpperCase() === "GET") {
       insertData.queries = queries.filter(q => q.key && q.value);
     } else { // POST, PUT, DELETE, PATCH
       insertData.api_body_template = apiBodyTemplate || null;
@@ -176,7 +170,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
       setSelectedCard(null);
       setButtonText("");
       setApiUrl("");
-      setApiMethod("POST");
+      setApiMethod({ value: "POST", label: "POST" }); // Reset to default
       setApiBodyTemplate("");
       setQueries([{ key: "", value: "" }]);
       queryClient.invalidateQueries(["adminButtonsList"]);
@@ -187,6 +181,13 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
 
   const cardOptions = cards?.map(card => ({ value: card.id, label: card.title })) || [];
   const queryParamOptions = queryParams?.map(param => ({ value: param.name, label: param.name })) || [];
+  const apiMethodOptions = [
+    { value: "GET", label: "GET" },
+    { value: "POST", label: "POST" },
+    { value: "PUT", label: "PUT" },
+    { value: "DELETE", label: "DELETE" },
+    { value: "PATCH", label: "PATCH" },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -243,25 +244,18 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
 
           <div className="grid gap-2">
             <Label htmlFor="api-method">API Method</Label>
-            <ShadcnSelect
+            <Select
+              id="api-method"
+              options={apiMethodOptions}
               value={apiMethod}
-              onValueChange={setApiMethod}
-              disabled={loading}
-            >
-              <SelectTrigger id="api-method" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
-                <SelectValue placeholder="Select API Method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-                <SelectItem value="PUT">PUT</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
-                <SelectItem value="PATCH">PATCH</SelectItem>
-              </SelectContent>
-            </ShadcnSelect>
+              onChange={setApiMethod}
+              isDisabled={loading}
+              placeholder="Select API Method"
+              styles={customStyles}
+            />
           </div>
 
-          {apiMethod.toUpperCase() === "GET" && (
+          {apiMethod.value.toUpperCase() === "GET" && (
             <div className="grid gap-2">
               <Label>Query Parameters</Label>
               {queries.map((query, index) => (
@@ -307,7 +301,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
             </div>
           )}
 
-          {['POST', 'PUT', 'DELETE', 'PATCH'].includes(apiMethod.toUpperCase()) && (
+          {['POST', 'PUT', 'DELETE', 'PATCH'].includes(apiMethod.value.toUpperCase()) && (
             <div className="grid gap-2">
               <Label htmlFor="api-body-template">API Body Template (JSON)</Label>
               <Textarea

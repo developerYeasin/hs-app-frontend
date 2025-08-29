@@ -6,13 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select as ShadcnSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Removed shadcn/ui Select imports as they are no longer needed for API Method
 import Select from 'react-select';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
@@ -81,7 +75,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [buttonText, setButtonText] = useState(button?.button_text || '');
   const [apiUrl, setApiUrl] = useState(button?.api_url || '');
-  const [apiMethod, setApiMethod] = useState(button?.api_method || 'POST');
+  const [apiMethod, setApiMethod] = useState({ value: "POST", label: "POST" }); // Default to POST, react-select format
   const [apiBodyTemplate, setApiBodyTemplate] = useState(button?.api_body_template || '');
   const [queries, setQueries] = useState(button?.queries || [{ key: "", value: "" }]);
   const [loading, setLoading] = useState(false);
@@ -101,6 +95,14 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     queryFn: fetchQueryParamsForSelect,
   });
 
+  const apiMethodOptions = [
+    { value: "GET", label: "GET" },
+    { value: "POST", label: "POST" },
+    { value: "PUT", label: "PUT" },
+    { value: "DELETE", label: "DELETE" },
+    { value: "PATCH", label: "PATCH" },
+  ];
+
   useEffect(() => {
     if (button && cards) {
       const initialCard = cards.find(card => card.id === button.card_id);
@@ -109,7 +111,8 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
       }
       setButtonText(button.button_text || '');
       setApiUrl(button.api_url || '');
-      setApiMethod(button.api_method || 'POST');
+      // Set apiMethod in react-select format
+      setApiMethod(apiMethodOptions.find(option => option.value === (button.api_method || 'POST')) || { value: "POST", label: "POST" });
       setApiBodyTemplate(button.api_body_template || '');
       setQueries(button.queries && button.queries.length > 0 ? button.queries : [{ key: "", value: "" }]);
     }
@@ -154,12 +157,12 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
       card_id: selectedCard.value,
       button_text: buttonText,
       api_url: apiUrl,
-      api_method: apiMethod,
+      api_method: apiMethod.value, // Use .value for the actual method string
       queries: [],
       api_body_template: null,
     };
 
-    if (apiMethod.toUpperCase() === "GET") {
+    if (apiMethod.value.toUpperCase() === "GET") {
       updateData.queries = queries.filter(q => q.key && q.value);
     } else { // POST, PUT, DELETE, PATCH
       updateData.api_body_template = apiBodyTemplate || null;
@@ -236,25 +239,18 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
 
           <div className="grid gap-2">
             <Label htmlFor="api-method">API Method</Label>
-            <ShadcnSelect
+            <Select
+              id="api-method"
+              options={apiMethodOptions}
               value={apiMethod}
-              onValueChange={setApiMethod}
-              disabled={loading}
-            >
-              <SelectTrigger id="api-method" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
-                <SelectValue placeholder="Select API Method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-                <SelectItem value="PUT">PUT</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
-                <SelectItem value="PATCH">PATCH</SelectItem>
-              </SelectContent>
-            </ShadcnSelect>
+              onChange={setApiMethod}
+              isDisabled={loading}
+              placeholder="Select API Method"
+              styles={customStyles}
+            />
           </div>
 
-          {apiMethod.toUpperCase() === "GET" && (
+          {apiMethod.value.toUpperCase() === "GET" && (
             <div className="grid gap-2">
               <Label>Query Parameters</Label>
               {queries.map((query, index) => (
@@ -300,7 +296,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
             </div>
           )}
 
-          {['POST', 'PUT', 'DELETE', 'PATCH'].includes(apiMethod.toUpperCase()) && (
+          {['POST', 'PUT', 'DELETE', 'PATCH'].includes(apiMethod.value.toUpperCase()) && (
             <div className="grid gap-2">
               <Label htmlFor="api-body-template">API Body Template (JSON)</Label>
               <Textarea
