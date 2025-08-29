@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 const fetchCardsWithButtons = async () => {
   const { data, error } = await supabase
     .from("cards")
-    .select("*, buttons(*)") // Select cards and their associated buttons
+    .select("*, buttons(*, execute_action_url)") // Select cards and their associated buttons, including the new execute_action_url
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
@@ -54,31 +54,32 @@ const Index = () => {
     try {
       showSuccess(`Executing button action: ${button.button_text}...`);
       
-      const baseUrl = 'https://txfsspgkakryggiodgic.supabase.co/functions/v1/execute-button-action';
-      const urlParams = new URLSearchParams();
-      urlParams.append('apikey', supabaseAnonKey); // Always add anon key as URL param
-      const url = `${baseUrl}?${urlParams.toString()}`;
+      // The execute_action_url is now provided by the get-all-buttons Edge Function
+      const executeActionUrl = button.execute_action_url;
 
-      // Placeholder for dynamic data, e.g., from a contact page
-      const dynamicData = {
-        // Example: objectId: 'some-contact-id', objectTypeId: '0-1',
-        hub_id: 'YOUR_HUBSPOT_HUB_ID', // IMPORTANT: Replace with actual hub_id or fetch dynamically
-        // customValue: 'some-value-for-template'
+      if (!executeActionUrl) {
+        throw new Error("Execute action URL not found for this button.");
+      }
+
+      // Placeholder for dynamic data. In a real scenario, objectId, objectTypeId,
+      // and hub_id would come from the context where the button is displayed (e.g., a HubSpot CRM card).
+      // For the public Index page, we'll use dummy values or fetch hub_id if the user is logged in and has an integration.
+      // For now, keeping hub_id as a placeholder.
+      const dynamicDataForExecution = {
+        button_id: button.id,
+        objectId: '5454', // Example: Replace with actual object ID from context
+        objectTypeId: '0-1', // Example: Replace with actual object Type ID (e.g., '0-1' for contacts)
+        hub_id: '23424', // IMPORTANT: Replace with actual hub_id or fetch dynamically based on user's integration
       };
 
-      const response = await fetch(url, {
-        method: 'POST', // The Edge Function always receives a POST request
+      const response = await fetch(executeActionUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Pass user ID or anon for context if needed
+          'apikey': supabaseAnonKey, // Pass anon key as header for Edge Function invocation
+          // 'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Not strictly needed for this specific Edge Function invocation, but good practice for authenticated calls
         },
-        body: JSON.stringify({
-          apiUrl: button.api_url,
-          apiMethod: button.api_method,
-          apiBodyTemplate: button.api_body_template,
-          queries: button.queries,
-          dynamicData: dynamicData,
-        }),
+        body: JSON.stringify(dynamicDataForExecution),
       });
 
       if (!response.ok) {
@@ -191,7 +192,9 @@ const Index = () => {
       </section>
 
       {/* New Feature Section 1: Image Left, Text Right */}
-      <section className="py-16 bg-secondary w-full">
+      <section
+        className="py-16 bg-secondary w-full"
+      >
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-12">
           <div className="md:w-1/2">
             <img

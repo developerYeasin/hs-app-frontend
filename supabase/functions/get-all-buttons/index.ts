@@ -32,7 +32,14 @@ serve(async (req) => {
       throw new Error(`Failed to fetch buttons: ${error.message}`);
     }
 
-    return new Response(JSON.stringify({ data: buttons }), {
+    // Add the execute-button-action URL to each button
+    const executeButtonActionUrl = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/execute-button-action`;
+    const buttonsWithActionUrl = buttons.map(button => ({
+      ...button,
+      execute_action_url: executeButtonActionUrl,
+    }));
+
+    return new Response(JSON.stringify({ data: buttonsWithActionUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

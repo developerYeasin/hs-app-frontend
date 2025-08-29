@@ -76,7 +76,12 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   const [apiUrl, setApiUrl] = useState(button?.api_url || '');
   const [apiMethod, setApiMethod] = useState({ value: "POST", label: "POST" }); // Default to POST, react-select format
   const [apiBodyTemplate, setApiBodyTemplate] = useState(button?.api_body_template || '');
-  const [queries, setQueries] = useState(button?.queries || [{ key: "", value: "" }]);
+  // Updated queries state to include a 'type' for each query value
+  const [queries, setQueries] = useState(button?.queries?.map(q => ({
+    key: q.key,
+    value: q.value.startsWith('{{contact.') && q.value.endsWith('}}') ? q.value.replace('{{contact.', '').replace('}}', '') : q.value,
+    valueType: q.value.startsWith('{{contact.') && q.value.endsWith('}}') ? 'contact_property' : 'static'
+  })) || [{ key: "", value: "", valueType: "static" }]);
   const [loading, setLoading] = useState(false);
 
   const { data: cards, isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery({
@@ -102,6 +107,23 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     { value: "PATCH", label: "PATCH" },
   ];
 
+  const queryValueTypeOptions = [
+    { value: "static", label: "Static Value" },
+    { value: "contact_property", label: "Contact Property" },
+  ];
+
+  // Common HubSpot contact properties for suggestions
+  const hubspotContactProperties = [
+    { value: "email", label: "Email" },
+    { value: "firstname", label: "First Name" },
+    { value: "lastname", label: "Last Name" },
+    { value: "phone", label: "Phone" },
+    { value: "company", label: "Company" },
+    { value: "website", label: "Website" },
+    { value: "lifecyclestage", label: "Lifecycle Stage" },
+    // Add more as needed
+  ];
+
   useEffect(() => {
     if (button && cards) {
       const initialCard = cards.find(card => card.id === button.card_id);
@@ -113,7 +135,12 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
       // Set apiMethod in react-select format
       setApiMethod(apiMethodOptions.find(option => option.value === (button.api_method || 'POST')) || { value: "POST", label: "POST" });
       setApiBodyTemplate(button.api_body_template || '');
-      setQueries(button.queries && button.queries.length > 0 ? button.queries : [{ key: "", value: "" }]);
+      // Map existing queries to the new format
+      setQueries(button.queries && button.queries.length > 0 ? button.queries.map(q => ({
+        key: q.key,
+        value: q.value.startsWith('{{contact.') && q.value.endsWith('}}') ? q.value.replace('{{contact.', '').replace('}}', '') : q.value,
+        valueType: q.value.startsWith('{{contact.') && q.value.endsWith('}}') ? 'contact_property' : 'static'
+      })) : [{ key: "", value: "", valueType: "static" }]);
     }
   }, [button, cards]);
 
@@ -127,7 +154,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   }, [isErrorCards, cardsError, isErrorQueryParams, queryParamsError]);
 
   const handleAddQuery = () => {
-    setQueries([...queries, { key: "", value: "" }]);
+    setQueries([...queries, { key: "", value: "", valueType: "static" }]);
   };
 
   const handleRemoveQuery = (index) => {
@@ -162,7 +189,11 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     };
 
     if (apiMethod.value.toUpperCase() === "GET") {
-      updateData.queries = queries.filter(q => q.key && q.value);
+      // Process queries based on valueType
+      updateData.queries = queries.filter(q => q.key && q.value).map(q => ({
+        key: q.key,
+        value: q.valueType === "contact_property" ? `{{contact.${q.value}}}` : q.value,
+      }));
     } else { // POST, PUT, DELETE, PATCH
       updateData.api_body_template = apiBodyTemplate || null;
     }
@@ -262,16 +293,37 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
                     isDisabled={isLoadingQueryParams || loading}
                     placeholder="Select Key"
                     styles={customStyles}
-                    className="w-1/2"
+                    className="w-1/3"
                   />
-                  <Input
-                    type="text"
-                    placeholder="Value"
-                    value={query.value}
-                    onChange={(e) => handleQueryChange(index, "value", e.target.value)}
-                    disabled={loading}
-                    className="w-1/2 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                  <Select
+                    options={queryValueTypeOptions}
+                    value={queryValueTypeOptions.find(option => option.value === query.valueType)}
+                    onChange={(selectedOption) => handleQueryChange(index, "valueType", selectedOption ? selectedOption.value : "static")}
+                    isDisabled={loading}
+                    placeholder="Value Type"
+                    styles={customStyles}
+                    className="w-1/4"
                   />
+                  {query.valueType === "static" ? (
+                    <Input
+                      type="text"
+                      placeholder="Static Value"
+                      value={query.value}
+                      onChange={(e) => handleQueryChange(index, "value", e.target.value)}
+                      disabled={loading}
+                      className="w-1/3 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <Select
+                      options={hubspotContactProperties}
+                      value={hubspotContactProperties.find(option => option.value === query.value)}
+                      onChange={(selectedOption) => handleQueryChange(index, "value", selectedOption ? selectedOption.value : "")}
+                      isDisabled={loading}
+                      placeholder="Select Property"
+                      styles={customStyles}
+                      className="w-1/3"
+                    />
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -300,7 +352,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
               <Label htmlFor="api-body-template">API Body Template (JSON)</Label>
               <Textarea
                 id="api-body-template"
-                placeholder='{"key": "{{dynamicData.value}}", "contact_email": "{{contact.email}}"}'
+                placeholder='{"key": "{{contact.email}}", "objectId": "{{objectId}}", "hubId": "{{hub_id}}"}'
                 value={apiBodyTemplate}
                 onChange={(e) => setApiBodyTemplate(e.target.value)}
                 disabled={loading}
@@ -308,7 +360,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
                 className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Use &lbrace;&lbrace;dynamicData.key&rbrace;&rbrace;, &lbrace;&lbrace;contact.property&rbrace;&rbrace;, &lbrace;&lbrace;objectId&rbrace;&rbrace;, &lbrace;&lbrace;objectTypeId&rbrace;&rbrace;, &lbrace;&lbrace;hub_id&rbrace;&rbrace; as placeholders.
+                Use placeholders like <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;contact.property&rbrace;&rbrace;</code> (e.g., <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;contact.email&rbrace;&rbrace;</code>), <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;objectId&rbrace;&rbrace;</code>, <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;objectTypeId&rbrace;&rbrace;</code>, <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;hub_id&rbrace;&rbrace;</code>, and <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">&lbrace;&lbrace;button_id&rbrace;&rbrace;</code>.
               </p>
             </div>
           )}

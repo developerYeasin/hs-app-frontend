@@ -10,11 +10,12 @@ const corsHeaders = {
 // Helper to map objectTypeId to objectType string
 const getHubspotObjectType = (objectTypeId: string): string | null => {
   switch (objectTypeId) {
-    case '0-1':
-      return 'contacts';
+    case '0-1': return 'contacts';
+    case '0-2': return 'companies';
+    case '0-3': return 'deals';
+    case '0-4': return 'tickets';
     // Add other mappings if needed
-    default:
-      return null;
+    default: return null;
   }
 };
 
@@ -24,17 +25,10 @@ serve(async (req) => {
   }
 
   try {
-    const { apiUrl, apiMethod, apiBodyTemplate, queries, dynamicData } = await req.json();
-    const { objectId, objectTypeId, hub_id } = dynamicData || {};
+    const { button_id, objectId, objectTypeId, hub_id } = await req.json();
 
-    if (!apiUrl || !apiMethod) {
-      return new Response(JSON.stringify({ error: 'apiUrl and apiMethod are required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
-    }
-    if (!hub_id) {
-      return new Response(JSON.stringify({ error: 'hub_id is required in dynamicData' }), {
+    if (!button_id || !hub_id) {
+      return new Response(JSON.stringify({ error: 'button_id and hub_id are required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
@@ -52,7 +46,24 @@ serve(async (req) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // 1. Retrieve client data by hub_id
+    // 1. Fetch Button Details
+    const { data: button, error: buttonError } = await supabaseClient
+      .from('buttons')
+      .select('api_url, api_method, api_body_template, queries')
+      .eq('id', button_id)
+      .single();
+
+    if (buttonError || !button) {
+      console.error('Error fetching button details:', buttonError);
+      return new Response(JSON.stringify({ error: `Button not found or error fetching details: ${buttonError?.message}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
+
+    let { api_url, api_method, api_body_template, queries } = button;
+
+    // 2. Retrieve client data by hub_id
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')
       .select('id, accessToken, refresh_token, expires_at')
@@ -71,7 +82,7 @@ serve(async (req) => {
     const refreshToken = clientData.refresh_token;
     let expiresAt = new Date(clientData.expires_at);
 
-    // 2. Token Refresh Logic
+    // 3. Token Refresh Logic
     if (expiresAt < new Date()) {
       console.log('Access token expired, refreshing...');
       const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
@@ -114,76 +125,92 @@ serve(async (req) => {
       }
     }
 
-    // 3. Fetch Contact Details if objectId and objectTypeId are provided
-    let contactDetails = null;
+    // 4. Fetch Object Details (e.g., Contact) if objectId and objectTypeId are provided
+    let objectDetails = null;
     if (objectId && objectTypeId) {
       const objectType = getHubspotObjectType(objectTypeId);
       if (!objectType) {
         console.warn(`Unsupported objectTypeId: ${objectTypeId}`);
       } else {
-        const hubspotContactResponse = await fetch(`https://api.hubapi.com/crm/v3/objects/${objectType}/${objectId}`, {
+        const hubspotObjectResponse = await fetch(`https://api.hubapi.com/crm/v3/objects/${objectType}/${objectId}`, {
           headers: {
             'Authorization': `Bearer ${currentAccessToken}`,
             'Content-Type': 'application/json',
           },
         });
 
-        if (!hubspotContactResponse.ok) {
-          const errorData = await hubspotContactResponse.json();
-          console.error(`Failed to fetch contact ${objectId} from HubSpot:`, errorData);
-          throw new Error(`Failed to fetch contact ${objectId} from HubSpot: ${errorData.message || JSON.stringify(errorData)}`);
+        if (!hubspotObjectResponse.ok) {
+          const errorData = await hubspotObjectResponse.json();
+          console.error(`Failed to fetch object ${objectId} (type ${objectType}) from HubSpot:`, errorData);
+          throw new Error(`Failed to fetch object ${objectId} (type ${objectType}) from HubSpot: ${errorData.message || JSON.stringify(errorData)}`);
         }
-        contactDetails = await hubspotContactResponse.json();
+        objectDetails = await hubspotObjectResponse.json();
       }
     }
 
-    // Construct the target URL with query parameters for GET requests
-    let targetUrl = apiUrl;
-    if (apiMethod.toUpperCase() === 'GET' && queries && queries.length > 0) {
+    // 5. Prepare dynamic data for placeholder replacement
+    const dynamicContext = {
+      objectId: objectId || '',
+      objectTypeId: objectTypeId || '',
+      hub_id: hub_id || '',
+      button_id: button_id || '',
+      contact: objectDetails?.properties || {}, // Use 'contact' for properties for backward compatibility with existing templates
+      object: objectDetails || {}, // General object details
+    };
+
+    // Helper function to replace placeholders
+    const replacePlaceholders = (template: string, context: any) => {
+      let result = template;
+      // Replace {{contact.property}}
+      for (const prop in context.contact) {
+        result = result.replace(new RegExp(`{{contact.${prop}}}`, 'g'), context.contact[prop]);
+      }
+      // Replace {{object.property}}
+      if (context.object?.properties) {
+        for (const prop in context.object.properties) {
+          result = result.replace(new RegExp(`{{object.${prop}}}`, 'g'), context.object.properties[prop]);
+        }
+      }
+      // Replace {{objectId}}, {{objectTypeId}}, {{hub_id}}, {{button_id}}
+      result = result.replace(/{{objectId}}/g, context.objectId);
+      result = result.replace(/{{objectTypeId}}/g, context.objectTypeId);
+      result = result.replace(/{{hub_id}}/g, context.hub_id);
+      result = result.replace(/{{button_id}}/g, context.button_id);
+      return result;
+    };
+
+    // 6. Construct the target URL with query parameters for GET requests
+    let finalApiUrl = replacePlaceholders(api_url, dynamicContext);
+    if (api_method.toUpperCase() === 'GET' && queries && queries.length > 0) {
       const urlSearchParams = new URLSearchParams();
       queries.forEach(q => {
         if (q.key && q.value) {
-          urlSearchParams.append(q.key, q.value);
+          urlSearchParams.append(q.key, replacePlaceholders(q.value, dynamicContext));
         }
       });
       if (urlSearchParams.toString()) {
-        targetUrl = `${targetUrl}?${urlSearchParams.toString()}`;
+        finalApiUrl = `${finalApiUrl}?${urlSearchParams.toString()}`;
       }
     }
 
-    // Prepare the request body for POST/PUT/DELETE requests
-    let requestBody = apiBodyTemplate;
-    if (requestBody) {
-      // Replace dynamicData placeholders
-      if (dynamicData) {
-        for (const key in dynamicData) {
-          requestBody = requestBody.replace(new RegExp(`{{dynamicData.${key}}}`, 'g'), dynamicData[key]);
-        }
-      }
-      // Replace contactDetails placeholders
-      if (contactDetails && contactDetails.properties) {
-        for (const key in contactDetails.properties) {
-          requestBody = requestBody.replace(new RegExp(`{{contact.${key}}}`, 'g'), contactDetails.properties[key]);
-        }
-        // Also replace top-level contact details like id
-        requestBody = requestBody.replace(new RegExp(`{{contact.id}}`, 'g'), contactDetails.id);
-      }
-      // Replace other common placeholders
-      requestBody = requestBody.replace(new RegExp(`{{objectId}}`, 'g'), objectId || '');
-      requestBody = requestBody.replace(new RegExp(`{{objectTypeId}}`, 'g'), objectTypeId || '');
-      requestBody = requestBody.replace(new RegExp(`{{hub_id}}`, 'g'), hub_id || '');
+    // 7. Prepare the request body for POST/PUT/DELETE requests
+    let finalRequestBody = null;
+    if (api_body_template && ['POST', 'PUT', 'PATCH'].includes(api_method.toUpperCase())) {
+      finalRequestBody = replacePlaceholders(api_body_template, dynamicContext);
     }
 
-    const externalResponse = await fetch(targetUrl, {
-      method: apiMethod,
+    // 8. Execute the external API call
+    const externalResponse = await fetch(finalApiUrl, {
+      method: api_method,
       headers: {
         'Content-Type': 'application/json',
-        // Add any other headers required by the external API, e.g., Authorization
         // If the target API is a HubSpot API, you might need to add the currentAccessToken here.
         // For generic external APIs, this might not be needed or might need a different token.
         // For now, assuming external APIs might not need HubSpot's bearer token unless explicitly passed.
+        // If the API URL starts with HubSpot's API domain, add the Authorization header.
+        ...(finalApiUrl.startsWith('https://api.hubapi.com/') ? { 'Authorization': `Bearer ${currentAccessToken}` } : {}),
       },
-      body: requestBody && ['POST', 'PUT', 'PATCH'].includes(apiMethod.toUpperCase()) ? requestBody : undefined,
+      body: finalRequestBody ? finalRequestBody : undefined,
     });
 
     if (!externalResponse.ok) {
