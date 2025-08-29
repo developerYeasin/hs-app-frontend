@@ -27,6 +27,8 @@ serve(async (req) => {
   try {
     const { button_id, objectId, objectTypeId, hub_id } = await req.json();
 
+    console.log('execute-button-action: Received payload:', { button_id, objectId, objectTypeId, hub_id }); // Log incoming payload
+
     if (!button_id || !hub_id) {
       return new Response(JSON.stringify({ error: 'button_id and hub_id are required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -54,16 +56,18 @@ serve(async (req) => {
       .single();
 
     if (buttonError || !button) {
-      console.error('Error fetching button details:', buttonError);
+      console.error('execute-button-action: Error fetching button details:', buttonError);
       return new Response(JSON.stringify({ error: `Button not found or error fetching details: ${buttonError?.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 404,
       });
     }
+    console.log('execute-button-action: Fetched button details:', button);
 
     let { api_url, api_method, api_body_template, queries } = button;
 
     // 2. Retrieve client data by hub_id
+    console.log('execute-button-action: Querying client table for hub_id:', hub_id); // Log the hub_id being queried
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')
       .select('id, accessToken, refresh_token, expires_at')
@@ -71,12 +75,13 @@ serve(async (req) => {
       .single();
 
     if (clientError || !clientData) {
-      console.error('Error fetching client data by hub_id:', clientError);
-      return new Response(JSON.stringify({ error: `HubSpot integration not found for hub_id: ${hub_id}` }), {
+      console.error('execute-button-action: Error fetching client data by hub_id:', clientError);
+      return new Response(JSON.stringify({ error: `HubSpot integration not found for hub_id: ${hub_id}. Supabase error: ${clientError?.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 404,
       });
     }
+    console.log('execute-button-action: Fetched client data:', clientData);
 
     let currentAccessToken = clientData.accessToken;
     const refreshToken = clientData.refresh_token;
@@ -84,7 +89,7 @@ serve(async (req) => {
 
     // 3. Token Refresh Logic
     if (expiresAt < new Date()) {
-      console.log('Access token expired, refreshing...');
+      console.log('execute-button-action: Access token expired, refreshing...');
       const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
         method: 'POST',
         headers: {
@@ -101,7 +106,7 @@ serve(async (req) => {
 
       if (!refreshResponse.ok) {
         const errorData = await refreshResponse.json();
-        console.error('Failed to refresh access token:', errorData);
+        console.error('execute-button-action: Failed to refresh access token:', errorData);
         throw new Error(`Failed to refresh access token: ${errorData.message || JSON.stringify(errorData)}`);
       }
 
@@ -120,9 +125,10 @@ serve(async (req) => {
         .eq('id', clientData.id);
 
       if (updateError) {
-        console.error('Supabase update error after token refresh:', updateError);
+        console.error('execute-button-action: Supabase update error after token refresh:', updateError);
         throw new Error(`Failed to update tokens in database: ${updateError.message}`);
       }
+      console.log('execute-button-action: Tokens refreshed and updated in Supabase.');
     }
 
     // 4. Fetch Object Details (e.g., Contact) if objectId and objectTypeId are provided
@@ -130,8 +136,9 @@ serve(async (req) => {
     if (objectId && objectTypeId) {
       const objectType = getHubspotObjectType(objectTypeId);
       if (!objectType) {
-        console.warn(`Unsupported objectTypeId: ${objectTypeId}`);
+        console.warn(`execute-button-action: Unsupported objectTypeId: ${objectTypeId}`);
       } else {
+        console.log(`execute-button-action: Fetching HubSpot object: ${objectType}/${objectId}`);
         const hubspotObjectResponse = await fetch(`https://api.hubapi.com/crm/v3/objects/${objectType}/${objectId}`, {
           headers: {
             'Authorization': `Bearer ${currentAccessToken}`,
@@ -141,10 +148,11 @@ serve(async (req) => {
 
         if (!hubspotObjectResponse.ok) {
           const errorData = await hubspotObjectResponse.json();
-          console.error(`Failed to fetch object ${objectId} (type ${objectType}) from HubSpot:`, errorData);
+          console.error(`execute-button-action: Failed to fetch object ${objectId} (type ${objectType}) from HubSpot:`, errorData);
           throw new Error(`Failed to fetch object ${objectId} (type ${objectType}) from HubSpot: ${errorData.message || JSON.stringify(errorData)}`);
         }
         objectDetails = await hubspotObjectResponse.json();
+        console.log('execute-button-action: Fetched HubSpot object details:', objectDetails);
       }
     }
 
@@ -157,6 +165,7 @@ serve(async (req) => {
       contact: objectDetails?.properties || {}, // Use 'contact' for properties for backward compatibility with existing templates
       object: objectDetails || {}, // General object details
     };
+    console.log('execute-button-action: Dynamic context for placeholders:', dynamicContext);
 
     // Helper function to replace placeholders
     const replacePlaceholders = (template: string, context: any) => {
@@ -192,22 +201,21 @@ serve(async (req) => {
         finalApiUrl = `${finalApiUrl}?${urlSearchParams.toString()}`;
       }
     }
+    console.log('execute-button-action: Final API URL:', finalApiUrl);
 
     // 7. Prepare the request body for POST/PUT/DELETE requests
     let finalRequestBody = null;
     if (api_body_template && ['POST', 'PUT', 'PATCH'].includes(api_method.toUpperCase())) {
       finalRequestBody = replacePlaceholders(api_body_template, dynamicContext);
+      console.log('execute-button-action: Final Request Body:', finalRequestBody);
     }
 
     // 8. Execute the external API call
+    console.log(`execute-button-action: Making external API call: ${api_method} ${finalApiUrl}`);
     const externalResponse = await fetch(finalApiUrl, {
       method: api_method,
       headers: {
         'Content-Type': 'application/json',
-        // If the target API is a HubSpot API, you might need to add the currentAccessToken here.
-        // For generic external APIs, this might not be needed or might need a different token.
-        // For now, assuming external APIs might not need HubSpot's bearer token unless explicitly passed.
-        // If the API URL starts with HubSpot's API domain, add the Authorization header.
         ...(finalApiUrl.startsWith('https://api.hubapi.com/') ? { 'Authorization': `Bearer ${currentAccessToken}` } : {}),
       },
       body: finalRequestBody ? finalRequestBody : undefined,
@@ -215,7 +223,7 @@ serve(async (req) => {
 
     if (!externalResponse.ok) {
       const errorText = await externalResponse.text();
-      console.error(`External API call failed: ${externalResponse.status} - ${errorText}`);
+      console.error(`execute-button-action: External API call failed: ${externalResponse.status} - ${errorText}`);
       return new Response(JSON.stringify({ error: `External API call failed: ${externalResponse.status} - ${errorText}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: externalResponse.status,
@@ -223,13 +231,14 @@ serve(async (req) => {
     }
 
     const responseData = await externalResponse.json();
+    console.log('execute-button-action: External API response:', responseData);
     return new Response(JSON.stringify({ message: 'Button action executed successfully', response: responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error('Error in execute-button-action:', error.message);
+    console.error('execute-button-action: Error in execute-button-action:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

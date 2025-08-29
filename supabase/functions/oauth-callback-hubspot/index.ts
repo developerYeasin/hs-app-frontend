@@ -16,8 +16,8 @@ serve(async (req) => {
     const code = url.searchParams.get('code');
     const stateParam = url.searchParams.get('state');
 
-    console.log('Received code:', code);
-    console.log('Received stateParam (raw):', stateParam);
+    console.log('oauth-callback-hubspot: Received code:', code);
+    console.log('oauth-callback-hubspot: Received stateParam (raw):', stateParam);
 
     if (!code || !stateParam) {
       return new Response(JSON.stringify({ error: 'Authorization code or state parameter missing.' }), {
@@ -30,12 +30,12 @@ serve(async (req) => {
     let user_id = null; // Initialize user_id
     try {
       const decodedStateString = decodeURIComponent(stateParam);
-      console.log('Decoded state string:', decodedStateString);
+      console.log('oauth-callback-hubspot: Decoded state string:', decodedStateString);
       const decodedState = JSON.parse(decodedStateString);
       client_id = decodedState.client_id;
       user_id = decodedState.user_id || null; // Extract user_id if present
     } catch (parseError) {
-      console.error('Error parsing state parameter:', parseError.message);
+      console.error('oauth-callback-hubspot: Error parsing state parameter:', parseError.message);
       return new Response(JSON.stringify({ error: `Invalid state parameter format: ${parseError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -75,7 +75,6 @@ serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
-    // --- NEW: Fetch hub_id from HubSpot using the new access token ---
     const hubspotMeResponse = await fetch(`https://api.hubapi.com/oauth/v1/access-tokens/${tokens.access_token}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -85,7 +84,7 @@ serve(async (req) => {
 
     if (!hubspotMeResponse.ok) {
       const errorData = await hubspotMeResponse.json();
-      console.error('Failed to fetch HubSpot hub_id:', errorData);
+      console.error('oauth-callback-hubspot: Failed to fetch HubSpot hub_id:', errorData);
       throw new Error(`Failed to fetch HubSpot hub_id: ${errorData.message || JSON.stringify(errorData)}`);
     }
 
@@ -95,20 +94,20 @@ serve(async (req) => {
     if (!hub_id) {
       throw new Error('Hub ID not found in HubSpot access token response.');
     }
-    // --- END NEW ---
+    console.log('oauth-callback-hubspot: Fetched hub_id from HubSpot:', hub_id); // Log the fetched hub_id
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || supabaseUrl === '') {
-      console.error('SUPABASE_URL environment variable is missing or empty in oauth-callback-hubspot.');
+      console.error('oauth-callback-hubspot: SUPABASE_URL environment variable is missing or empty.');
       return new Response(JSON.stringify({ error: 'Supabase URL environment variable is missing or empty.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
     if (!supabaseServiceRoleKey || supabaseServiceRoleKey === '') {
-      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is missing or empty in oauth-callback-hubspot.');
+      console.error('oauth-callback-hubspot: SUPABASE_SERVICE_ROLE_KEY environment variable is missing or empty.');
       return new Response(JSON.stringify({ error: 'Supabase Service Role Key environment variable is missing or empty.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -130,8 +129,10 @@ serve(async (req) => {
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt.toISOString(),
       user_id: user_id,
-      hub_id: hub_id, // --- NEW: Store hub_id ---
+      hub_id: hub_id,
     };
+
+    console.log('oauth-callback-hubspot: Upserting client data:', upsertData); // Log data before upsert
 
     const { data, error } = await supabaseClient
       .from('client')
@@ -139,9 +140,10 @@ serve(async (req) => {
       .select();
 
     if (error) {
-      console.error('Supabase upsert error:', error);
+      console.error('oauth-callback-hubspot: Supabase upsert error:', error);
       throw new Error(`Failed to save tokens to database: ${error.message}`);
     }
+    console.log('oauth-callback-hubspot: Supabase upsert successful:', data); // Log successful upsert
 
     return new Response(null, {
       status: 302,
@@ -152,7 +154,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in oauth-callback-hubspot:', error.message);
+    console.error('oauth-callback-hubspot: Error in oauth-callback-hubspot:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
