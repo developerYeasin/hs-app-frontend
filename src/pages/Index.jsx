@@ -51,54 +51,47 @@ const Index = () => {
   };
 
   const handleButtonClick = async (button) => {
-    if (button.type === 'url') {
-      let url = button.button_url;
-      if (button.queries && button.queries.length > 0) {
-        const queryParams = new URLSearchParams();
-        button.queries.forEach(q => {
-          if (q.key && q.value) {
-            queryParams.append(q.key, q.value);
-          }
-        });
-        if (queryParams.toString()) {
-          url = `${url}?${queryParams.toString()}`;
-        }
+    try {
+      showSuccess(`Executing button action: ${button.button_text}...`);
+      
+      const baseUrl = 'https://txfsspgkakryggiodgic.supabase.co/functions/v1/execute-button-action';
+      const urlParams = new URLSearchParams();
+      urlParams.append('apikey', supabaseAnonKey); // Always add anon key as URL param
+      const url = `${baseUrl}?${urlParams.toString()}`;
+
+      // Placeholder for dynamic data, e.g., from a contact page
+      const dynamicData = {
+        // Example: objectId: 'some-contact-id', objectTypeId: '0-1',
+        hub_id: 'YOUR_HUBSPOT_HUB_ID', // IMPORTANT: Replace with actual hub_id or fetch dynamically
+        // customValue: 'some-value-for-template'
+      };
+
+      const response = await fetch(url, {
+        method: 'POST', // The Edge Function always receives a POST request
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Pass user ID or anon for context if needed
+        },
+        body: JSON.stringify({
+          apiUrl: button.api_url,
+          apiMethod: button.api_method,
+          apiBodyTemplate: button.api_body_template,
+          queries: button.queries,
+          dynamicData: dynamicData,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to execute button action');
       }
-      window.open(url, '_blank');
-    } else if (button.type === 'webhook') {
-      try {
-        showSuccess(`Invoking webhook: ${button.button_text}...`);
-        
-        const baseUrl = 'https://txfsspgkakryggiodgic.supabase.co/functions/v1/invoke-webhook';
-        const urlParams = new URLSearchParams();
-        urlParams.append('apikey', supabaseAnonKey); // Always add anon key as URL param
-        const url = `${baseUrl}?${urlParams.toString()}`;
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Pass user ID or anon for context if needed by webhook
-            // Removed 'apikey' from headers as it's now in the URL
-          },
-          body: JSON.stringify({
-            webhookId: button.webhook_id,
-            dynamicData: button.queries ? Object.fromEntries(button.queries.map(q => [q.key, q.value])) : {},
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to invoke webhook');
-        }
-
-        const result = await response.json();
-        showSuccess(`Webhook "${button.button_text}" invoked successfully!`);
-        console.log('Webhook response:', result);
-      } catch (error) {
-        showError(`Error invoking webhook "${button.button_text}": ${error.message}`);
-        console.error('Webhook invocation error:', error);
-      }
+      const result = await response.json();
+      showSuccess(`Button "${button.button_text}" executed successfully!`);
+      console.log('Button action response:', result);
+    } catch (error) {
+      showError(`Error executing button "${button.button_text}": ${error.message}`);
+      console.error('Button action error:', error);
     }
   };
 

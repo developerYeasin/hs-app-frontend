@@ -24,11 +24,11 @@ serve(async (req) => {
   }
 
   try {
-    const { webhookId, dynamicData } = await req.json();
-    const { objectId, objectTypeId, hub_id } = dynamicData || {}; // Extract new fields
+    const { apiUrl, apiMethod, apiBodyTemplate, queries, dynamicData } = await req.json();
+    const { objectId, objectTypeId, hub_id } = dynamicData || {};
 
-    if (!webhookId) {
-      return new Response(JSON.stringify({ error: 'webhookId is required' }), {
+    if (!apiUrl || !apiMethod) {
+      return new Response(JSON.stringify({ error: 'apiUrl and apiMethod are required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
@@ -137,27 +137,27 @@ serve(async (req) => {
       }
     }
 
-    // Fetch webhook details from the database
-    const { data: webhook, error: fetchError } = await supabaseClient
-      .from('webhooks')
-      .select('url, method, body_template')
-      .eq('id', webhookId)
-      .single();
-
-    if (fetchError || !webhook) {
-      console.error('Error fetching webhook:', fetchError?.message || 'Webhook not found');
-      return new Response(JSON.stringify({ error: `Webhook not found or access denied: ${fetchError?.message}` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
+    // Construct the target URL with query parameters for GET requests
+    let targetUrl = apiUrl;
+    if (apiMethod.toUpperCase() === 'GET' && queries && queries.length > 0) {
+      const urlSearchParams = new URLSearchParams();
+      queries.forEach(q => {
+        if (q.key && q.value) {
+          urlSearchParams.append(q.key, q.value);
+        }
       });
+      if (urlSearchParams.toString()) {
+        targetUrl = `${targetUrl}?${urlSearchParams.toString()}`;
+      }
     }
 
-    let requestBody = webhook.body_template;
+    // Prepare the request body for POST/PUT/DELETE requests
+    let requestBody = apiBodyTemplate;
     if (requestBody) {
       // Replace dynamicData placeholders
       if (dynamicData) {
         for (const key in dynamicData) {
-          requestBody = requestBody.replace(new RegExp(`{{${key}}}`, 'g'), dynamicData[key]);
+          requestBody = requestBody.replace(new RegExp(`{{dynamicData.${key}}}`, 'g'), dynamicData[key]);
         }
       }
       // Replace contactDetails placeholders
@@ -174,32 +174,35 @@ serve(async (req) => {
       requestBody = requestBody.replace(new RegExp(`{{hub_id}}`, 'g'), hub_id || '');
     }
 
-    const externalResponse = await fetch(webhook.url, {
-      method: webhook.method,
+    const externalResponse = await fetch(targetUrl, {
+      method: apiMethod,
       headers: {
         'Content-Type': 'application/json',
-        // Add any other headers required by the external webhook, e.g., Authorization
+        // Add any other headers required by the external API, e.g., Authorization
+        // If the target API is a HubSpot API, you might need to add the currentAccessToken here.
+        // For generic external APIs, this might not be needed or might need a different token.
+        // For now, assuming external APIs might not need HubSpot's bearer token unless explicitly passed.
       },
-      body: requestBody ? requestBody : undefined,
+      body: requestBody && ['POST', 'PUT', 'PATCH'].includes(apiMethod.toUpperCase()) ? requestBody : undefined,
     });
 
     if (!externalResponse.ok) {
       const errorText = await externalResponse.text();
-      console.error(`External webhook call failed: ${externalResponse.status} - ${errorText}`);
-      return new Response(JSON.stringify({ error: `External webhook call failed: ${externalResponse.status} - ${errorText}` }), {
+      console.error(`External API call failed: ${externalResponse.status} - ${errorText}`);
+      return new Response(JSON.stringify({ error: `External API call failed: ${externalResponse.status} - ${errorText}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: externalResponse.status,
       });
     }
 
     const responseData = await externalResponse.json();
-    return new Response(JSON.stringify({ message: 'Webhook invoked successfully', response: responseData }), {
+    return new Response(JSON.stringify({ message: 'Button action executed successfully', response: responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error('Error in invoke-webhook:', error.message);
+    console.error('Error in execute-button-action:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

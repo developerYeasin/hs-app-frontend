@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  Select as ShadcnSelect, // Renamed to avoid conflict with react-select
+  Select as ShadcnSelect,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"; // Import ToggleGroup
-import Select from 'react-select'; // Import react-select
+import Select from 'react-select';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,15 +21,6 @@ import { X, Plus, Minus } from "lucide-react";
 
 const fetchCardsForSelect = async () => {
   const { data, error } = await supabase.from('cards').select('id, title').order('title', { ascending: true });
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const fetchWebhooksForSelect = async () => {
-  const { data, error } = await supabase
-    .from("webhooks")
-    .select("id, name, url, method")
-    .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return data;
 };
@@ -89,25 +80,15 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   const queryClient = useQueryClient();
   const [selectedCard, setSelectedCard] = useState(null);
   const [buttonText, setButtonText] = useState(button?.button_text || '');
-  const [buttonType, setButtonType] = useState(button?.type || 'url');
-  const [buttonUrl, setButtonUrl] = useState(button?.button_url || '');
+  const [apiUrl, setApiUrl] = useState(button?.api_url || '');
+  const [apiMethod, setApiMethod] = useState(button?.api_method || 'POST');
+  const [apiBodyTemplate, setApiBodyTemplate] = useState(button?.api_body_template || '');
   const [queries, setQueries] = useState(button?.queries || [{ key: "", value: "" }]);
-  const [selectedWebhook, setSelectedWebhook] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const { data: cards, isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery({
     queryKey: ['adminCards'],
     queryFn: fetchCardsForSelect,
-  });
-
-  const {
-    data: webhooks,
-    isLoading: isLoadingWebhooks,
-    isError: isErrorWebhooks,
-    error: webhooksError,
-  } = useQuery({
-    queryKey: ["adminWebhooks"],
-    queryFn: fetchWebhooksForSelect,
   });
 
   const {
@@ -127,29 +108,21 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
         setSelectedCard({ value: initialCard.id, label: initialCard.title });
       }
       setButtonText(button.button_text || '');
-      setButtonType(button.type || 'url');
-      setButtonUrl(button.button_url || '');
+      setApiUrl(button.api_url || '');
+      setApiMethod(button.api_method || 'POST');
+      setApiBodyTemplate(button.api_body_template || '');
       setQueries(button.queries && button.queries.length > 0 ? button.queries : [{ key: "", value: "" }]);
-      if (button.webhook_id && webhooks) {
-        const initialWebhook = webhooks.find(wh => wh.id === button.webhook_id);
-        if (initialWebhook) {
-          setSelectedWebhook({ value: initialWebhook.id, label: `${initialWebhook.name} (${initialWebhook.method})`, url: initialWebhook.url, method: initialWebhook.method });
-        }
-      }
     }
-  }, [button, cards, webhooks]); // Depend on 'cards' and 'webhooks' to ensure they are loaded
+  }, [button, cards]);
 
   React.useEffect(() => {
     if (isErrorCards) {
       showError('Failed to load cards for selection: ' + cardsError.message);
     }
-    if (isErrorWebhooks) {
-      showError("Failed to load webhooks for selection: " + webhooksError.message);
-    }
     if (isErrorQueryParams) {
       showError("Failed to load query parameters for selection: " + queryParamsError.message);
     }
-  }, [isErrorCards, cardsError, isErrorWebhooks, webhooksError, isErrorQueryParams, queryParamsError]);
+  }, [isErrorCards, cardsError, isErrorQueryParams, queryParamsError]);
 
   const handleAddQuery = () => {
     setQueries([...queries, { key: "", value: "" }]);
@@ -180,22 +153,16 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     let updateData = {
       card_id: selectedCard.value,
       button_text: buttonText,
-      type: buttonType,
+      api_url: apiUrl,
+      api_method: apiMethod,
+      queries: [],
+      api_body_template: null,
     };
 
-    if (buttonType === "url") {
-      updateData.button_url = buttonUrl;
+    if (apiMethod.toUpperCase() === "GET") {
       updateData.queries = queries.filter(q => q.key && q.value);
-      updateData.webhook_id = null;
-    } else { // buttonType === "webhook"
-      if (!selectedWebhook) {
-        showError("Please select a webhook.");
-        setLoading(false);
-        return;
-      }
-      updateData.webhook_id = selectedWebhook.value;
-      updateData.button_url = null;
-      updateData.queries = [];
+    } else { // POST, PUT, DELETE, PATCH
+      updateData.api_body_template = apiBodyTemplate || null;
     }
 
     const { error } = await supabase
@@ -214,10 +181,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
   };
 
   const cardOptions = cards?.map(card => ({ value: card.id, label: card.title })) || [];
-  const webhookOptions = webhooks?.map(webhook => ({ value: webhook.id, label: `${webhook.name} (${webhook.method})`, url: webhook.url, method: webhook.method })) || [];
   const queryParamOptions = queryParams?.map(param => ({ value: param.name, label: param.name })) || [];
-
-  const currentWebhookDetails = selectedWebhook ? webhooks?.find(wh => wh.id === selectedWebhook.value) : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -247,7 +211,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
             <Input
               id="button-text"
               type="text"
-              placeholder="e.g., Learn More"
+              placeholder="e.g., Trigger Action"
               value={buttonText}
               onChange={(e) => setButtonText(e.target.value)}
               required
@@ -257,117 +221,105 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
           </div>
 
           <div className="grid gap-2">
-            <Label>Button Type</Label>
-            <ToggleGroup
-              type="single"
-              value={buttonType}
-              onValueChange={setButtonType}
-              className="flex justify-start border rounded-md overflow-hidden"
+            <Label htmlFor="api-url">API URL</Label>
+            <Input
+              id="api-url"
+              type="url"
+              placeholder="https://api.example.com/endpoint"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              required
               disabled={loading}
-            >
-              <ToggleGroupItem
-                value="url"
-                aria-label="Toggle URL type"
-                className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-secondary data-[state=off]:text-secondary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=off]:hover:bg-secondary/80 data-[state=off]:hover:text-secondary-foreground rounded-none border-r last:border-r-0"
-              >
-                URL
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="webhook"
-                aria-label="Toggle Webhook type"
-                className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-secondary data-[state=off]:text-secondary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=off]:hover:bg-secondary/80 data-[state=off]:hover:text-secondary-foreground rounded-none"
-              >
-                Webhook
-              </ToggleGroupItem>
-            </ToggleGroup>
+              className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
           </div>
 
-          {buttonType === "url" && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="button-url">Button URL</Label>
-                <Input
-                  id="button-url"
-                  type="url"
-                  placeholder="https://example.com"
-                  value={buttonUrl}
-                  onChange={(e) => setButtonUrl(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
+          <div className="grid gap-2">
+            <Label htmlFor="api-method">API Method</Label>
+            <ShadcnSelect
+              value={apiMethod}
+              onValueChange={setApiMethod}
+              disabled={loading}
+            >
+              <SelectTrigger id="api-method" className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+                <SelectValue placeholder="Select API Method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GET">GET</SelectItem>
+                <SelectItem value="POST">POST</SelectItem>
+                <SelectItem value="PUT">PUT</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
+                <SelectItem value="PATCH">PATCH</SelectItem>
+              </SelectContent>
+            </ShadcnSelect>
+          </div>
 
-              <div className="grid gap-2">
-                <Label>Query Parameters</Label>
-                {queries.map((query, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Select
-                      options={queryParamOptions}
-                      value={queryParamOptions.find(option => option.value === query.key)}
-                      onChange={(selectedOption) => handleQueryChange(index, "key", selectedOption ? selectedOption.value : "")}
-                      isLoading={isLoadingQueryParams}
-                      isDisabled={isLoadingQueryParams || loading}
-                      placeholder="Select Key"
-                      styles={customStyles}
-                      className="w-1/2"
-                    />
-                    <Input
-                      type="text"
-                      placeholder="Value"
-                      value={query.value}
-                      onChange={(e) => handleQueryChange(index, "value", e.target.value)}
-                      disabled={loading}
-                      className="w-1/2 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleRemoveQuery(index)}
-                      disabled={loading || queries.length === 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddQuery}
-                  disabled={loading}
-                  className="mt-2 w-fit"
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Add Query
-                </Button>
-              </div>
-            </>
+          {apiMethod.toUpperCase() === "GET" && (
+            <div className="grid gap-2">
+              <Label>Query Parameters</Label>
+              {queries.map((query, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Select
+                    options={queryParamOptions}
+                    value={queryParamOptions.find(option => option.value === query.key)}
+                    onChange={(selectedOption) => handleQueryChange(index, "key", selectedOption ? selectedOption.value : "")}
+                    isLoading={isLoadingQueryParams}
+                    isDisabled={isLoadingQueryParams || loading}
+                    placeholder="Select Key"
+                    styles={customStyles}
+                    className="w-1/2"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Value"
+                    value={query.value}
+                    onChange={(e) => handleQueryChange(index, "value", e.target.value)}
+                    disabled={loading}
+                    className="w-1/2 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleRemoveQuery(index)}
+                    disabled={loading || queries.length === 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddQuery}
+                disabled={loading}
+                className="mt-2 w-fit"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Query
+              </Button>
+            </div>
           )}
 
-          {buttonType === "webhook" && (
+          {['POST', 'PUT', 'DELETE', 'PATCH'].includes(apiMethod.toUpperCase()) && (
             <div className="grid gap-2">
-              <Label htmlFor="webhook-select">Select Webhook</Label>
-              <Select
-                id="webhook-select"
-                options={webhookOptions}
-                value={selectedWebhook}
-                onChange={setSelectedWebhook}
-                isLoading={isLoadingWebhooks}
-                isDisabled={isLoadingWebhooks || loading}
-                placeholder="Select a webhook"
-                styles={customStyles}
+              <Label htmlFor="api-body-template">API Body Template (JSON)</Label>
+              <Textarea
+                id="api-body-template"
+                placeholder='{"key": "{{dynamicData.value}}", "contact_email": "{{contact.email}}"}'
+                value={apiBodyTemplate}
+                onChange={(e) => setApiBodyTemplate(e.target.value)}
+                disabled={loading}
+                rows={6}
+                className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
               />
-              {currentWebhookDetails && (
-                <div className="mt-2 p-3 text-sm bg-muted rounded-md text-muted-foreground">
-                  <p><strong>URL:</strong> {currentWebhookDetails.url}</p>
-                  <p><strong>Method:</strong> {currentWebhookDetails.method}</p>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Use `{{dynamicData.key}}`, `{{contact.property}}`, `{{objectId}}`, `{{objectTypeId}}`, `{{hub_id}}` as placeholders.
+              </p>
             </div>
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={loading || !selectedCard || (buttonType === "url" && !buttonUrl) || (buttonType === "webhook" && !selectedWebhook)}>
+            <Button type="submit" disabled={loading || !selectedCard || !apiUrl}>
               {loading ? 'Saving changes...' : 'Save changes'}
             </Button>
           </DialogFooter>

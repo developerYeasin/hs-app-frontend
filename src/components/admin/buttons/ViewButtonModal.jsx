@@ -9,13 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { showError } from '@/utils/toast';
 import { X } from "lucide-react";
 
-const ViewButtonModal = ({ isOpen, onOpenChange, button }) => { // Receive button object directly
-  // No need for fetchButtonDetails as we already have the button object with joined data
-  // from ManageButtons.jsx's fetchButtons query.
-
+const ViewButtonModal = ({ isOpen, onOpenChange, button }) => {
   React.useEffect(() => {
-    // If there was an error fetching the button in the parent, it would be handled there.
-    // This modal just displays the passed `button` prop.
     if (!button && isOpen) {
       showError('No button data provided to view.');
     }
@@ -45,48 +40,44 @@ const ViewButtonModal = ({ isOpen, onOpenChange, button }) => { // Receive butto
               <p>{button.cards?.title || 'N/A'}</p>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Button Type:</h3>
-              <p className="capitalize">{button.type}</p>
+              <h3 className="text-lg font-semibold">API URL:</h3>
+              <p className="break-all">
+                <a href={button.api_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                  {button.api_url}
+                </a>
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">API Method:</h3>
+              <p className="uppercase">{button.api_method}</p>
             </div>
 
-            {button.type === 'url' && (
-              <>
-                <div>
-                  <h3 className="text-lg font-semibold">Button URL:</h3>
-                  <p className="break-all">
-                    <a href={button.button_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      {button.button_url}
-                    </a>
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold">Query Parameters:</h3>
-                  {button.queries && button.queries.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1">
-                      {button.queries.map((query, index) => (
-                        <li key={index}>
-                          <span className="font-medium">{query.key}</span>: {query.value}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No query parameters.</p>
-                  )}
-                </div>
-              </>
+            {button.api_method.toUpperCase() === 'GET' && (
+              <div>
+                <h3 className="text-lg font-semibold">Query Parameters:</h3>
+                {button.queries && button.queries.length > 0 ? (
+                  <ul className="list-disc pl-5 space-y-1">
+                    {button.queries.map((query, index) => (
+                      <li key={index}>
+                        <span className="font-medium">{query.key}</span>: {query.value}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No query parameters.</p>
+                )}
+              </div>
             )}
 
-            {button.type === 'webhook' && (
+            {['POST', 'PUT', 'DELETE', 'PATCH'].includes(button.api_method.toUpperCase()) && (
               <div>
-                <h3 className="text-lg font-semibold">Webhook:</h3>
-                {button.webhooks ? (
-                  <div className="space-y-1">
-                    <p><strong>Name:</strong> {button.webhooks.name}</p>
-                    <p><strong>URL:</strong> {button.webhooks.url}</p>
-                    <p><strong>Method:</strong> {button.webhooks.method}</p>
-                  </div>
+                <h3 className="text-lg font-semibold">API Body Template:</h3>
+                {button.api_body_template ? (
+                  <pre className="bg-muted p-2 rounded-md text-sm overflow-x-auto">
+                    <code>{button.api_body_template}</code>
+                  </pre>
                 ) : (
-                  <p className="text-muted-foreground">No webhook associated.</p>
+                  <p className="text-muted-foreground">No body template provided.</p>
                 )}
               </div>
             )}
