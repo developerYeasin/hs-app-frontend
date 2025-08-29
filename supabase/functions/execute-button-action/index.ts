@@ -72,11 +72,21 @@ serve(async (req) => {
       .from('client')
       .select('id, accessToken, refresh_token, expires_at')
       .eq('hub_id', hub_id)
-      .single();
+      .order('created_at', { ascending: false }) // Order by creation date to get the most recent
+      .limit(1) // Limit to one result
+      .maybeSingle(); // Use maybeSingle to handle 0 or 1 result
 
-    if (clientError || !clientData) {
-      console.error('execute-button-action: Error fetching client data by hub_id:', clientError);
-      return new Response(JSON.stringify({ error: `HubSpot integration not found for hub_id: ${hub_id}. Supabase error: ${clientError?.message}` }), {
+    if (clientError) {
+      console.error('execute-button-action: Supabase query error for client data:', clientError);
+      return new Response(JSON.stringify({ error: `Supabase query error for client data: ${clientError.message}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
+    if (!clientData) {
+      console.error('execute-button-action: No HubSpot integration found for hub_id:', hub_id);
+      return new Response(JSON.stringify({ error: `HubSpot integration not found for hub_id: ${hub_id}. Please ensure the app is installed and linked.` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 404,
       });
