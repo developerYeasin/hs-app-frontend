@@ -313,7 +313,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
                 className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Use `&lbrace;&lbrace;dynamicData.key&rbrace;&rbrace;`, `&lbrace;&lbrace;contact.property&rbrace;&rbrace;`, `&lbrace;&lbrace;objectId&rbrace;&rbrace;`, `&lbrace;&lbrace;objectTypeId&rbrace;&rbrace;`, `&lbrace;&lbrace;hub_id&rbrace;&rbrace;` as placeholders.
+                Use &lbrace;&lbrace;dynamicData.key&rbrace;&rbrace;, &lbrace;&lbrace;contact.property&rbrace;&rbrace;, &lbrace;&lbrace;objectId&rbrace;&rbrace;, &lbrace;&lbrace;objectTypeId&rbrace;&rbrace;, &lbrace;&lbrace;hub_id&rbrace;&rbrace; as placeholders.
               </p>
             </div>
           )}
