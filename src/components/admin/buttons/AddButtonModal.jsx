@@ -320,7 +320,7 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
                 className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Use `{{dynamicData.key}}`, `{{contact.property}}`, `{{objectId}}`, `{{objectTypeId}}`, `{{hub_id}}` as placeholders.
+                Use `&lbrace;&lbrace;dynamicData.key&rbrace;&rbrace;`, `&lbrace;&lbrace;contact.property&rbrace;&rbrace;`, `&lbrace;&lbrace;objectId&rbrace;&rbrace;`, `&lbrace;&lbrace;objectTypeId&rbrace;&rbrace;`, `&lbrace;&lbrace;hub_id&rbrace;&rbrace;` as placeholders.
               </p>
             </div>
           )}
