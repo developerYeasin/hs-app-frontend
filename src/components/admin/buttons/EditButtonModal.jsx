@@ -122,6 +122,9 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
     { value: "company", label: "Company" },
     { value: "website", label: "Website" },
     { value: "lifecyclestage", label: "Lifecycle Stage" },
+    { value: "createdate", label: "Create Date" }, // Added
+    { value: "hs_object_id", label: "HubSpot Object ID" }, // Added
+    { value: "lastmodifieddate", label: "Last Modified Date" }, // Added
     // Add more as needed
   ];
 
