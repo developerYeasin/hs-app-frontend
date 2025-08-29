@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable'; // Import CreatableSelect
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -281,13 +282,13 @@ const AddButtonModal = ({ isOpen, onOpenChange }) => {
               <Label>Query Parameters</Label>
               {queries.map((query, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <Select
+                  <CreatableSelect // Changed to CreatableSelect
                     options={queryParamOptions}
-                    value={queryParamOptions.find(option => option.value === query.key)}
+                    value={query.key ? { value: query.key, label: query.key } : null}
                     onChange={(selectedOption) => handleQueryChange(index, "key", selectedOption ? selectedOption.value : "")}
                     isLoading={isLoadingQueryParams}
                     isDisabled={isLoadingQueryParams || loading}
-                    placeholder="Select Key"
+                    placeholder="Select or type Key"
                     styles={customStyles}
                     className="w-1/3"
                   />
