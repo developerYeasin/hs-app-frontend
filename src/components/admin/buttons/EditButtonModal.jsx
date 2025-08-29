@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-// Removed shadcn/ui Select imports as they are no longer needed for API Method
 import Select from 'react-select';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
@@ -224,7 +223,7 @@ const EditButtonModal = ({ isOpen, onOpenChange, button }) => {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="api-url">API URL</Label>
+            <Label htmlFor="api-url">Webhook API URL</Label>
             <Input
               id="api-url"
               type="url"
