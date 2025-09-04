@@ -77,12 +77,12 @@ const CustomLoginForm = () => {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? 'Logging in...' : 'Sign In'}
       </Button>
-      <p className="text-center text-sm text-muted-foreground">
+      {/* <p className="text-center text-sm text-muted-foreground">
         Don't have an account?{' '}
         <Link to="/signup" className="text-primary hover:underline">
           Sign Up
         </Link>
-      </p>
+      </p> */}
     </form>
   );
 };
