@@ -3,7 +3,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, CreditCard, List, LogOut, Users, Settings } from "lucide-react"; // Import Settings icon
+import { LayoutDashboard, CreditCard, List, LogOut, Settings } from "lucide-react"; // Removed Users icon
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,11 +30,7 @@ const AdminSidebar = () => {
       path: "/admin/buttons",
       icon: <List className="mr-2 h-4 w-4" />,
     },
-    {
-      name: "HubSpot Contacts",
-      path: "/admin/contacts",
-      icon: <Users className="mr-2 h-4 w-4" />,
-    },
+    // Removed HubSpot Contacts item
     {
       name: "Client Accounts", // New item for Client Accounts
       path: "/admin/client-accounts",

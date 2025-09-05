@@ -19,7 +19,6 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import ManageCards from "./pages/admin/ManageCards.jsx";
 import ManageButtons from "./pages/admin/ManageButtons.jsx";
 import AdminLayout from "./components/admin/AdminLayout.jsx";
-import AdminContacts from "./pages/admin/AdminContacts.jsx";
 import ClientAccounts from "./pages/admin/ClientAccounts.jsx"; // New import for ClientAccounts
 import {
   SessionContextProvider,
@@ -74,7 +73,7 @@ const App = () => (
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="cards" element={<ManageCards />} />
                 <Route path="buttons" element={<ManageButtons />} />
-                <Route path="contacts" element={<AdminContacts />} />
+                {/* Removed contacts route */}
                 <Route path="client-accounts" element={<ClientAccounts />} /> {/* New admin client accounts route */}
               </Route>
             </Routes>
