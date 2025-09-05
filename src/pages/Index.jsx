@@ -6,14 +6,14 @@ import { Download } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useSession } from "@/components/auth/SessionContextProvider.jsx";
 import { useQuery } from "@tanstack/react-query";
-import { supabase, supabaseAnonKey } from "@/integrations/supabase/client.js"; // Import supabaseAnonKey
+import { supabase, supabaseAnonKey } from "@/integrations/supabase/client.js";
 import { showError, showSuccess } from "@/utils/toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Import Card components
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const fetchCardsWithButtons = async () => {
   const { data, error } = await supabase
     .from("cards")
-    .select("*, buttons(*, execute_action_url)") // Select cards and their associated buttons, including the new execute_action_url
+    .select("*, buttons(*, execute_action_url)")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
@@ -54,30 +54,48 @@ const Index = () => {
     try {
       showSuccess(`Executing button action: ${button.button_text}...`);
       
-      // The execute_action_url is now provided by the get-all-buttons Edge Function
       const executeActionUrl = button.execute_action_url;
 
       if (!executeActionUrl) {
         throw new Error("Execute action URL not found for this button.");
       }
 
-      // Placeholder for dynamic data. In a real scenario, objectId, objectTypeId,
-      // and hub_id would come from the context where the button is displayed (e.g., a HubSpot CRM card).
-      // For the public Index page, we'll use dummy values or fetch hub_id if the user is logged in and has an integration.
-      // For now, keeping hub_id as a placeholder.
+      // IMPORTANT: For the public Index page, we need to decide which hub_id to use.
+      // For now, we'll use a placeholder. In a real scenario, this would come from
+      // a user's selection or a default connected account.
+      // For demonstration, let's try to fetch the first connected hub_id for the current user if logged in.
+      let targetHubId = '23424'; // Default placeholder
+
+      if (user) {
+        const { data: clientData, error: clientError } = await supabase
+          .from('client')
+          .select('hub_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
+        
+        if (clientData) {
+          targetHubId = clientData.hub_id;
+        } else if (clientError && clientError.code !== 'PGRST116') { // PGRST116 means no rows found
+          console.error('Error fetching user\'s hub_id for button execution:', clientError);
+          showError('Could not determine HubSpot account for button action. Please connect an account.');
+          return;
+        }
+      }
+
+
       const dynamicDataForExecution = {
         button_id: button.id,
         objectId: '5454', // Example: Replace with actual object ID from context
         objectTypeId: '0-1', // Example: Replace with actual object Type ID (e.g., '0-1' for contacts)
-        hub_id: '23424', // IMPORTANT: Replace with actual hub_id or fetch dynamically based on user's integration
+        hub_id: targetHubId, // Use the determined hub_id
       };
 
       const response = await fetch(executeActionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey, // Pass anon key as header for Edge Function invocation
-          // 'Authorization': `Bearer ${user?.id ? user.id : 'anon'}`, // Not strictly needed for this specific Edge Function invocation, but good practice for authenticated calls
+          'apikey': supabaseAnonKey,
         },
         body: JSON.stringify(dynamicDataForExecution),
       });

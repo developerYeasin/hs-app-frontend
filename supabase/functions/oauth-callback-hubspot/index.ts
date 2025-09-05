@@ -27,13 +27,15 @@ serve(async (req) => {
     }
 
     let client_id;
-    let user_id = null; // Initialize user_id
+    let user_id = null;
+    let existing_hub_id = null; // To check if we are re-authenticating an existing hub_id
     try {
       const decodedStateString = decodeURIComponent(stateParam);
       console.log('oauth-callback-hubspot: Decoded state string:', decodedStateString);
       const decodedState = JSON.parse(decodedStateString);
       client_id = decodedState.client_id;
-      user_id = decodedState.user_id || null; // Extract user_id if present
+      user_id = decodedState.user_id || null;
+      existing_hub_id = decodedState.hub_id || null; // Get existing hub_id if present
     } catch (parseError) {
       console.error('oauth-callback-hubspot: Error parsing state parameter:', parseError.message);
       return new Response(JSON.stringify({ error: `Invalid state parameter format: ${parseError.message}` }), {
@@ -42,8 +44,8 @@ serve(async (req) => {
       });
     }
 
-    if (!client_id) {
-      throw new Error('Client ID missing from state parameter.');
+    if (!client_id || !user_id) { // user_id is now required for upsert logic
+      throw new Error('Client ID or User ID missing from state parameter.');
     }
 
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
@@ -94,7 +96,7 @@ serve(async (req) => {
     if (!hub_id) {
       throw new Error('Hub ID not found in HubSpot access token response.');
     }
-    console.log('oauth-callback-hubspot: Fetched hub_id from HubSpot:', hub_id); // Log the fetched hub_id
+    console.log('oauth-callback-hubspot: Fetched hub_id from HubSpot:', hub_id);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -121,34 +123,56 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
+    // Check if a client record already exists for this user_id and hub_id
+    let existingClientRecordId = client_id; // Default to the client_id from state
+
+    if (existing_hub_id && existing_hub_id === hub_id) {
+      // If we are re-authenticating an existing hub_id, try to find its client_id
+      const { data: existingClient, error: fetchExistingError } = await supabaseClient
+        .from('client')
+        .select('id')
+        .eq('user_id', user_id)
+        .eq('hub_id', hub_id)
+        .single();
+
+      if (existingClient) {
+        existingClientRecordId = existingClient.id;
+        console.log('oauth-callback-hubspot: Found existing client record for hub_id, using its ID:', existingClientRecordId);
+      } else if (fetchExistingError && fetchExistingError.code !== 'PGRST116') { // PGRST116 means no rows found
+        console.error('oauth-callback-hubspot: Error fetching existing client record:', fetchExistingError);
+        throw new Error(`Failed to check for existing client record: ${fetchExistingError.message}`);
+      }
+    }
+
     const upsertData = {
-      id: client_id,
-      contacts: 'hubspot_integration',
+      id: existingClientRecordId, // Use the determined client ID
+      contacts: 'hubspot_integration', // This field seems generic, keeping it as is
       accessToken: tokens.access_token,
-      sessionID: client_id,
+      sessionID: existingClientRecordId, // sessionID can be our internal client_id
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt.toISOString(),
       user_id: user_id,
       hub_id: hub_id,
     };
 
-    console.log('oauth-callback-hubspot: Upserting client data:', upsertData); // Log data before upsert
+    console.log('oauth-callback-hubspot: Upserting client data:', upsertData);
 
     const { data, error } = await supabaseClient
       .from('client')
-      .upsert(upsertData, { onConflict: 'id' })
+      .upsert(upsertData, { onConflict: 'user_id,hub_id' }) // Conflict on user_id and hub_id
       .select();
 
     if (error) {
       console.error('oauth-callback-hubspot: Supabase upsert error:', error);
       throw new Error(`Failed to save tokens to database: ${error.message}`);
     }
-    console.log('oauth-callback-hubspot: Supabase upsert successful:', data); // Log successful upsert
+    console.log('oauth-callback-hubspot: Supabase upsert successful:', data);
 
+    // Redirect to the thank-you page, or potentially to admin/client-accounts
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://hsmini.netlify.app/thank-you`,
+        'Location': `https://hsmini.netlify.app/thank-you`, // Or `/admin/client-accounts`
         ...corsHeaders,
       },
     });

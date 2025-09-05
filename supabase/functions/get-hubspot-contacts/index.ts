@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    let client_id = url.searchParams.get('client_id');
+    const hub_id_param = url.searchParams.get('hub_id'); // Expect hub_id as a query parameter
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -23,56 +23,43 @@ serve(async (req) => {
       supabaseServiceRoleKey ?? ''
     );
 
-    // If client_id is not provided in the URL, try to get it from the authenticated user's session
-    if (!client_id) {
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401,
-        });
-      }
-      const token = authHeader.split(' ')[1];
-      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    // Get user from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
-      if (authError || !user) {
-        console.error('Auth error in get-hubspot-contacts:', authError?.message);
-        return new Response(JSON.stringify({ error: 'Unauthorized: Could not get user from token.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401,
-        });
-      }
-
-      // Fetch the client_id associated with this user
-      const { data: clientLinkData, error: clientLinkError } = await supabaseClient
-        .from('client')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (clientLinkError || !clientLinkData) {
-        console.error('Error fetching client_id for user:', clientLinkError);
-        throw new Error('No HubSpot integration found for this user. Please install the app.');
-      }
-      client_id = clientLinkData.id;
+    if (authError || !user) {
+      console.error('Auth error in get-hubspot-contacts:', authError?.message);
+      return new Response(JSON.stringify({ error: 'Unauthorized: Could not get user from token.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
     }
 
-    if (!client_id) {
-      return new Response(JSON.stringify({ error: 'client_id is required' }), {
+    if (!hub_id_param) {
+      return new Response(JSON.stringify({ error: 'hub_id is required as a query parameter.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    let { data: clientData, error: clientError } = await supabaseClient
+    // Fetch the client data associated with this user and hub_id
+    let { data: clientData, error: clientLinkError } = await supabaseClient
       .from('client')
-      .select('accessToken, refresh_token, expires_at')
-      .eq('id', client_id)
+      .select('id, accessToken, refresh_token, expires_at')
+      .eq('user_id', user.id)
+      .eq('hub_id', hub_id_param)
       .single();
 
-    if (clientError || !clientData) {
-      console.error('Error fetching client data:', clientError);
-      throw new Error('HubSpot integration not found for this client_id. Please install the app.');
+    if (clientLinkError || !clientData) {
+      console.error('Error fetching client data for user and hub_id:', clientLinkError);
+      throw new Error(`No HubSpot integration found for this user and hub_id (${hub_id_param}). Please ensure the app is installed and linked.`);
     }
 
     let accessToken = clientData.accessToken;
@@ -82,10 +69,10 @@ serve(async (req) => {
     if (expiresAt < new Date()) {
       console.log('Access token expired, refreshing...');
       const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
-      const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET'); // Changed to CLIENT_SECRET
+      const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET');
       const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`; 
 
-      if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) { // Changed to CLIENT_SECRET
+      if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) {
         throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
       }
 
@@ -97,7 +84,7 @@ serve(async (req) => {
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           client_id: HUBSPOT_CLIENT_ID,
-          client_secret: CLIENT_SECRET, // Changed to CLIENT_SECRET
+          client_secret: CLIENT_SECRET,
           redirect_uri: HUBSPOT_REDIRECT_URI,
           refresh_token: refreshToken,
         }).toString(),
@@ -119,7 +106,7 @@ serve(async (req) => {
           refresh_token: newTokens.refresh_token || refreshToken,
           expires_at: newExpiresAt.toISOString(),
         })
-        .eq('id', client_id);
+        .eq('id', clientData.id); // Update by our internal client ID
 
       if (updateError) {
         console.error('Supabase update error after refresh:', updateError);
