@@ -15,15 +15,16 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  const [hubspotClientId, setHubspotClientId] = useState(clientRecord?.hubspot_client_id || '');
-  const [hubspotClientSecret, setHubspotClientSecret] = useState(clientRecord?.hubspot_client_secret || '');
+  // These fields will be empty on open, requiring re-entry for security
+  const [hubspotClientId, setHubspotClientId] = useState('');
+  const [hubspotClientSecret, setHubspotClientSecret] = useState('');
 
   useEffect(() => {
-    if (clientRecord) {
-      setHubspotClientId(clientRecord.hubspot_client_id || '');
-      setHubspotClientSecret(clientRecord.hubspot_client_secret || '');
+    if (isOpen) { // Clear fields when modal opens
+      setHubspotClientId('');
+      setHubspotClientSecret('');
     }
-  }, [clientRecord]);
+  }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,12 +36,44 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
       return;
     }
 
+    // Only update if new values are provided
+    const updateData = {};
+    if (hubspotClientId) {
+      // Encrypt the new client ID before sending
+      const { data: encryptedClientId, error: encryptIdError } = await supabase.rpc('encrypt_secret', {
+        plain_text: hubspotClientId,
+        key: Deno.env.get('ENCRYPTION_KEY') // This will be available in the Edge Function context
+      });
+      if (encryptIdError) {
+        showError('Failed to encrypt Client ID: ' + encryptIdError.message);
+        setLoading(false);
+        return;
+      }
+      updateData.hubspot_client_id = encryptedClientId;
+    }
+    if (hubspotClientSecret) {
+      // Encrypt the new client secret before sending
+      const { data: encryptedClientSecret, error: encryptSecretError } = await supabase.rpc('encrypt_secret', {
+        plain_text: hubspotClientSecret,
+        key: Deno.env.get('ENCRYPTION_KEY') // This will be available in the Edge Function context
+      });
+      if (encryptSecretError) {
+        showError('Failed to encrypt Client Secret: ' + encryptSecretError.message);
+        setLoading(false);
+        return;
+      }
+      updateData.hubspot_client_secret = encryptedClientSecret;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      showError("No changes detected. Please enter new credentials to update.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase
       .from('client')
-      .update({
-        hubspot_client_id: hubspotClientId,
-        hubspot_client_secret: hubspotClientSecret,
-      })
+      .update(updateData)
       .eq('id', clientRecord.id);
 
     if (error) {
@@ -60,6 +93,7 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
           <DialogTitle>Edit HubSpot Client Credentials</DialogTitle>
           <DialogDescription>
             Update the Client ID and Client Secret for Hub ID: {clientRecord?.hub_id}.
+            For security, please re-enter the full values if you wish to change them.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
@@ -68,10 +102,9 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
             <Input
               id="edit-client-id"
               type="text"
-              placeholder="Your HubSpot App Client ID"
+              placeholder="Enter new HubSpot App Client ID"
               value={hubspotClientId}
               onChange={(e) => setHubspotClientId(e.target.value)}
-              required
               disabled={loading}
               className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
             />
@@ -80,10 +113,9 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
             <Label htmlFor="edit-client-secret">HubSpot Client Secret</Label>
             <Textarea
               id="edit-client-secret"
-              placeholder="Your HubSpot App Client Secret"
+              placeholder="Enter new HubSpot App Client Secret"
               value={hubspotClientSecret}
               onChange={(e) => setHubspotClientSecret(e.target.value)}
-              required
               disabled={loading}
               rows={3}
               className="rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"

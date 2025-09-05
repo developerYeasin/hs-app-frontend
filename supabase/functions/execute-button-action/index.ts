@@ -38,9 +38,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const ENCRYPTION_KEY = Deno.env.get('ENCRYPTION_KEY'); // Retrieve encryption key
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing required environment variables for Supabase.');
+    if (!supabaseUrl || !supabaseServiceRoleKey || !ENCRYPTION_KEY) {
+      throw new Error('Missing required environment variables for Supabase (URL, Service Role Key, or ENCRYPTION_KEY).');
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -67,7 +68,14 @@ serve(async (req) => {
     console.log('execute-button-action: Querying client table for hub_id:', hub_id);
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')
-      .select('id, accessToken, refresh_token, expires_at, hubspot_client_id, hubspot_client_secret')
+      .select(`
+        id,
+        accessToken,
+        refresh_token,
+        expires_at,
+        hubspot_client_id,
+        hubspot_client_secret
+      `)
       .eq('hub_id', hub_id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -94,9 +102,28 @@ serve(async (req) => {
     const refreshToken = clientData.refresh_token;
     let expiresAt = clientData.expires_at ? new Date(clientData.expires_at) : new Date(0); // Handle null expires_at
 
-    // Determine HubSpot credentials to use for refresh
-    const hubspotClientIdToUse = clientData.hubspot_client_id || Deno.env.get('HUBSPOT_CLIENT_ID');
-    const hubspotClientSecretToUse = clientData.hubspot_client_secret || Deno.env.get('CLIENT_SECRET');
+    // Decrypt the fetched client ID and secret
+    let hubspotClientIdToUse = Deno.env.get('HUBSPOT_CLIENT_ID'); // Default to env
+    let hubspotClientSecretToUse = Deno.env.get('CLIENT_SECRET'); // Default to env
+
+    if (clientData.hubspot_client_id && clientData.hubspot_client_secret) {
+      const { data: decryptedClientId, error: decryptIdError } = await supabaseClient.rpc('decrypt_secret', {
+        encrypted_data: clientData.hubspot_client_id,
+        key: ENCRYPTION_KEY
+      });
+      const { data: decryptedClientSecret, error: decryptSecretError } = await supabaseClient.rpc('decrypt_secret', {
+        encrypted_data: clientData.hubspot_client_secret,
+        key: ENCRYPTION_KEY
+      });
+
+      if (decryptIdError || decryptSecretError) {
+        console.error('execute-button-action: Error decrypting client credentials:', decryptIdError || decryptSecretError);
+        // Fallback to env vars if decryption fails
+      } else {
+        hubspotClientIdToUse = decryptedClientId;
+        hubspotClientSecretToUse = decryptedClientSecret;
+      }
+    }
 
     if (!hubspotClientIdToUse || !hubspotClientSecretToUse) {
       throw new Error('HubSpot API credentials (Client ID, Client Secret) not available for token refresh.');

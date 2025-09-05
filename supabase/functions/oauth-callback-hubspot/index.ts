@@ -50,9 +50,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const ENCRYPTION_KEY = Deno.env.get('ENCRYPTION_KEY'); // Retrieve encryption key
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Supabase URL or Service Role Key environment variables not set.');
+    if (!supabaseUrl || !supabaseServiceRoleKey || !ENCRYPTION_KEY) {
+      throw new Error('Supabase URL, Service Role Key, or ENCRYPTION_KEY environment variables not set.');
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -63,9 +64,15 @@ serve(async (req) => {
 
     let clientRecordForCredentials = null;
     if (internal_client_id) {
+      // When fetching, decrypt the stored values
       const { data: fetchedClient, error: fetchClientError } = await supabaseClient
         .from('client')
-        .select('hubspot_client_id, hubspot_client_secret')
+        .select(`
+          id,
+          hub_id,
+          hubspot_client_id,
+          hubspot_client_secret
+        `)
         .eq('id', internal_client_id)
         .single();
 
@@ -73,10 +80,25 @@ serve(async (req) => {
         console.error('oauth-callback-hubspot: Error fetching client credentials:', fetchClientError);
         // Continue with default env vars if there's an error, but log it
       } else if (fetchedClient && fetchedClient.hubspot_client_id && fetchedClient.hubspot_client_secret) {
-        hubspotClientIdToUse = fetchedClient.hubspot_client_id;
-        hubspotClientSecretToUse = fetchedClient.hubspot_client_secret;
-        clientRecordForCredentials = fetchedClient; // Store for later update if needed
-        console.log('oauth-callback-hubspot: Using client-specific HubSpot credentials.');
+        // Decrypt the fetched values
+        const { data: decryptedClientId, error: decryptIdError } = await supabaseClient.rpc('decrypt_secret', {
+          encrypted_data: fetchedClient.hubspot_client_id,
+          key: ENCRYPTION_KEY
+        });
+        const { data: decryptedClientSecret, error: decryptSecretError } = await supabaseClient.rpc('decrypt_secret', {
+          encrypted_data: fetchedClient.hubspot_client_secret,
+          key: ENCRYPTION_KEY
+        });
+
+        if (decryptIdError || decryptSecretError) {
+          console.error('oauth-callback-hubspot: Error decrypting client credentials:', decryptIdError || decryptSecretError);
+          // Fallback to env vars if decryption fails
+        } else {
+          hubspotClientIdToUse = decryptedClientId;
+          hubspotClientSecretToUse = decryptedClientSecret;
+          clientRecordForCredentials = fetchedClient; // Store for later update if needed
+          console.log('oauth-callback-hubspot: Using client-specific HubSpot credentials.');
+        }
       } else {
         console.log('oauth-callback-hubspot: Client-specific credentials not found or incomplete, falling back to environment variables.');
       }
@@ -132,6 +154,21 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
 
+    // Encrypt the client ID and secret before upserting
+    const { data: encryptedClientId, error: encryptIdError } = await supabaseClient.rpc('encrypt_secret', {
+      plain_text: hubspotClientIdToUse,
+      key: ENCRYPTION_KEY
+    });
+    const { data: encryptedClientSecret, error: encryptSecretError } = await supabaseClient.rpc('encrypt_secret', {
+      plain_text: hubspotClientSecretToUse,
+      key: ENCRYPTION_KEY
+    });
+
+    if (encryptIdError || encryptSecretError) {
+      console.error('oauth-callback-hubspot: Error encrypting client credentials for upsert:', encryptIdError || encryptSecretError);
+      throw new Error('Failed to encrypt client credentials for storage.');
+    }
+
     const upsertData = {
       id: internal_client_id, // Use our internal UUID
       contacts: 'hubspot_integration',
@@ -141,8 +178,8 @@ serve(async (req) => {
       expires_at: expiresAt.toISOString(),
       user_id: user_id,
       hub_id: hub_id,
-      hubspot_client_id: hubspotClientIdToUse, // Store the client ID used
-      hubspot_client_secret: hubspotClientSecretToUse, // Store the client secret used
+      hubspot_client_id: encryptedClientId, // Store the encrypted client ID
+      hubspot_client_secret: encryptedClientSecret, // Store the encrypted client secret
     };
 
     console.log('oauth-callback-hubspot: Upserting client data:', upsertData);
