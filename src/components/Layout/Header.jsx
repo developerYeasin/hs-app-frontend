@@ -18,12 +18,7 @@ const Header = () => {
         </Link>
         <nav>
           <ul className="flex space-x-4 items-center">
-            <li>
-              <Button variant="ghost" asChild>
-                <Link to="/">Install App</Link>
-              </Button>
-            </li>
-            {/* Contacts link moved to AdminSidebar */}
+            {/* Removed the "Install App" link */}
             {user ? (
               <li>
                 <Button variant="ghost" asChild>
