@@ -47,6 +47,7 @@ const ManageButtons = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedButton, setSelectedButton] = useState(null);
   const [buttonToDelete, setButtonToDelete] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // New state for delete dialog
 
   const {
     data: buttons,
@@ -64,12 +65,13 @@ const ManageButtons = () => {
     }
   }, [isErrorButtons, buttonsError]);
 
-  const handleDeleteButton = async (buttonId) => {
-    setButtonToDelete(null); // Clear the button to delete immediately
+  const handleDeleteButton = async () => { // Modified to use buttonToDelete state
+    if (!buttonToDelete) return;
+
     const { error } = await supabase
       .from("buttons")
       .delete()
-      .eq("id", buttonId);
+      .eq("id", buttonToDelete);
 
     if (error) {
       showError("Failed to delete button: " + error.message);
@@ -77,6 +79,8 @@ const ManageButtons = () => {
       showSuccess("Button deleted successfully!");
       queryClient.invalidateQueries(["adminButtonsList"]);
     }
+    setButtonToDelete(null); // Clear the button to delete
+    setIsDeleteDialogOpen(false); // Close the dialog
   };
 
   const openEditModal = (button) => {
@@ -160,41 +164,19 @@ const ManageButtons = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <AlertDialog>
+                        <AlertDialog> {/* This AlertDialog is for a single button */}
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="destructive"
                               size="icon"
-                              onClick={() => setButtonToDelete(button.id)}
+                              onClick={() => {
+                                setButtonToDelete(button.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          {buttonToDelete === button.id && (
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Are you absolutely sure?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete this button.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel
-                                  onClick={() => setButtonToDelete(null)}
-                                >
-                                  Cancel
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteButton(button.id)}
-                                >
-                                  Continue
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          )}
                         </AlertDialog>
                       </div>
                     </TableCell>
@@ -205,6 +187,34 @@ const ManageButtons = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Global AlertDialog for delete confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will
+              permanently delete this button.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setButtonToDelete(null);
+                setIsDeleteDialogOpen(false);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteButton}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddButtonModal
         isOpen={isAddModalOpen}
