@@ -226,7 +226,7 @@ const ManageButtons = () => {
       {selectedButton && (
         <ViewButtonModal
           isOpen={isViewModalOpen}
-          onOpenChange={setIsViewModalOpen} {/* Corrected prop name here */}
+          onOpenChange={setIsViewModalOpen}
           button={selectedButton}
         />
       )}
