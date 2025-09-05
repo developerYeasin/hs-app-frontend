@@ -202,6 +202,7 @@ const ManageButtons = () => {
                 setButtonToDelete(null);
                 setIsDeleteDialogOpen(false);
               }}
+              className="my-0"
             >
               Cancel
             </AlertDialogCancel>
