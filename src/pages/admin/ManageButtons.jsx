@@ -47,7 +47,7 @@ const ManageButtons = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedButton, setSelectedButton] = useState(null);
   const [buttonToDelete, setButtonToDelete] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // New state for delete dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete dialog
 
   const {
     data: buttons,
@@ -65,7 +65,7 @@ const ManageButtons = () => {
     }
   }, [isErrorButtons, buttonsError]);
 
-  const handleDeleteButton = async () => { // Modified to use buttonToDelete state
+  const handleDeleteButton = async () => {
     if (!buttonToDelete) return;
 
     const { error } = await supabase
@@ -164,20 +164,16 @@ const ManageButtons = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <AlertDialog> {/* This AlertDialog is for a single button */}
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => {
-                                setButtonToDelete(button.id);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </AlertDialog>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => {
+                            setButtonToDelete(button.id);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
