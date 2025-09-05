@@ -43,23 +43,36 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
       return;
     }
 
-    // Call the RPC function to encrypt and update
-    const { data, error: rpcError } = await supabase.rpc('update_client_credentials', {
-      p_id: clientRecord.id,
-      p_user_id: clientRecord.user_id,
-      p_hub_id: clientRecord.hub_id,
-      p_hubspot_client_id: hubspotClientId || null, // Pass null if not changed
-      p_hubspot_client_secret: hubspotClientSecret || null, // Pass null if not changed
-    });
+    try {
+      const response = await fetch('https://txfsspgkakryggiodgic.supabase.co/functions/v1/save-client-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabase.supabaseKey, // Use the anon key for Edge Function invocation
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`
+        },
+        body: JSON.stringify({
+          id: clientRecord.id,
+          user_id: clientRecord.user_id,
+          hub_id: clientRecord.hub_id,
+          hubspot_client_id: hubspotClientId || undefined, // Only send if provided
+          hubspot_client_secret: hubspotClientSecret || undefined, // Only send if provided
+        }),
+      });
 
-    if (rpcError) {
-      showError('Failed to update HubSpot client credentials: ' + rpcError.message);
-    } else {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update HubSpot client credentials.');
+      }
+
       showSuccess('HubSpot client credentials updated successfully!');
       queryClient.invalidateQueries(['clientAccounts', clientRecord.user_id]);
       onOpenChange(false);
+    } catch (error) {
+      showError('Failed to update HubSpot client credentials: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

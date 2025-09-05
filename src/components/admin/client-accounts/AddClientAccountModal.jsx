@@ -54,28 +54,39 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
 
     const newClientId = uuidv4(); // Our internal UUID for this new manual connection
 
-    // Call the RPC function to encrypt and upsert
-    const { data, error: rpcError } = await supabase.rpc('upsert_client_credentials', {
-      p_id: newClientId,
-      p_user_id: user.id,
-      p_hub_id: manualHubId,
-      p_hubspot_client_id: manualClientId,
-      p_hubspot_client_secret: manualClientSecret,
-      p_contacts: 'manual_hubspot_integration',
-      p_session_id: newClientId,
-    });
+    try {
+      const response = await fetch('https://txfsspgkakryggiodgic.supabase.co/functions/v1/save-client-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabase.supabaseKey, // Use the anon key for Edge Function invocation
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`
+        },
+        body: JSON.stringify({
+          id: newClientId,
+          user_id: user.id,
+          hub_id: manualHubId,
+          hubspot_client_id: manualClientId,
+          hubspot_client_secret: manualClientSecret,
+        }),
+      });
 
-    if (rpcError) {
-      showError('Failed to add HubSpot account manually: ' + rpcError.message);
-    } else {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add HubSpot account manually.');
+      }
+
       showSuccess('HubSpot account added manually! Please use the "Connect via OAuth" button in the table to get access tokens.');
       setManualHubId('');
       setManualClientId('');
       setManualClientSecret('');
       queryClient.invalidateQueries(['clientAccounts', user?.id]);
       onOpenChange(false);
+    } catch (error) {
+      showError('Failed to add HubSpot account manually: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
