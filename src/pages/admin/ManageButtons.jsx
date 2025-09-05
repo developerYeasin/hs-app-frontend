@@ -196,7 +196,7 @@ const ManageButtons = () => {
               permanently delete this button.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex justify-end space-x-2"> {/* Added styling here */}
+          <AlertDialogFooter className="flex flex-row items-center justify-end space-x-2">
             <AlertDialogCancel
               onClick={() => {
                 setButtonToDelete(null);
