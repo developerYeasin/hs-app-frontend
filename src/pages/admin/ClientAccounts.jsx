@@ -68,9 +68,9 @@ const ClientAccounts = () => {
     }
   }, [isErrorAccounts, accountsError]);
 
-  const handleReauthenticate = (clientRecord) => {
+  const handleConnectOAuthForClient = (clientRecord) => {
     if (!user) {
-      showError("Please log in to re-authenticate.");
+      showError("Please log in to connect a HubSpot account.");
       return;
     }
     // When re-authenticating, we pass the existing clientRecord.id (our UUID) and hub_id in the state
@@ -169,8 +169,8 @@ const ClientAccounts = () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => handleReauthenticate(client)}
-                          title="Re-authenticate"
+                          onClick={() => handleConnectOAuthForClient(client)}
+                          title="Connect via OAuth"
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>

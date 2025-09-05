@@ -24,7 +24,9 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
   const [manualClientId, setManualClientId] = useState('');
   const [manualClientSecret, setManualClientSecret] = useState('');
 
-  const handleOAuthConnect = () => {
+  // The OAuth connect button will now be in the table for existing manual entries
+  // This function is for the initial "Connect with HubSpot" button on the main page
+  const handleOAuthConnectInitial = () => {
     if (!user) {
       showError("Please log in to connect a HubSpot account.");
       return;
@@ -52,26 +54,21 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
 
     const newClientId = uuidv4(); // Our internal UUID for this new manual connection
 
-    const { error } = await supabase
-      .from('client')
-      .upsert({
-        id: newClientId,
-        user_id: user.id,
-        hub_id: manualHubId,
-        hubspot_client_id: manualClientId,
-        hubspot_client_secret: manualClientSecret,
-        // Default values for tokens, will need to be re-authenticated for full functionality
-        accessToken: null, 
-        refresh_token: null,
-        expires_at: null,
-        contacts: 'manual_hubspot_integration',
-        sessionID: newClientId,
-      }, { onConflict: 'user_id,hub_id' }); // Conflict on user_id and hub_id
+    // Call the RPC function to encrypt and upsert
+    const { data, error: rpcError } = await supabase.rpc('upsert_client_credentials', {
+      p_id: newClientId,
+      p_user_id: user.id,
+      p_hub_id: manualHubId,
+      p_hubspot_client_id: manualClientId,
+      p_hubspot_client_secret: manualClientSecret,
+      p_contacts: 'manual_hubspot_integration',
+      p_session_id: newClientId,
+    });
 
-    if (error) {
-      showError('Failed to add HubSpot account manually: ' + error.message);
+    if (rpcError) {
+      showError('Failed to add HubSpot account manually: ' + rpcError.message);
     } else {
-      showSuccess('HubSpot account added manually! Please re-authenticate if you wish to fetch data.');
+      showSuccess('HubSpot account added manually! Please use the "Connect via OAuth" button in the table to get access tokens.');
       setManualHubId('');
       setManualClientId('');
       setManualClientSecret('');
@@ -102,7 +99,7 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
                 Use the standard HubSpot OAuth flow to securely connect your account.
               </p>
               <Button
-                onClick={handleOAuthConnect}
+                onClick={handleOAuthConnectInitial}
                 className="py-2.5 px-4 flex items-center mx-auto"
                 disabled={loading || !user}
               >
@@ -117,7 +114,7 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
             <form onSubmit={handleManualConnect} className="grid gap-4">
               <p className="text-muted-foreground">
                 Manually enter your HubSpot Hub ID, Client ID, and Client Secret.
-                Note: You will still need to re-authenticate via OAuth to get access and refresh tokens for API calls.
+                You will then need to use the "Connect via OAuth" button in the table to get access and refresh tokens.
               </p>
               <div className="grid gap-2">
                 <Label htmlFor="manual-hub-id">Hub ID</Label>
@@ -160,7 +157,7 @@ const AddClientAccountModal = ({ isOpen, onOpenChange }) => {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={loading || !user}>
-                  {loading ? 'Connecting...' : 'Add Manually'}
+                  {loading ? 'Adding...' : 'Add Manually'}
                 </Button>
               </DialogFooter>
             </form>

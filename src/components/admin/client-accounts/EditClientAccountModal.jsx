@@ -30,54 +30,30 @@ const EditClientAccountModal = ({ isOpen, onOpenChange, clientRecord }) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!clientRecord?.id) {
-      showError("No client record selected for editing.");
+    if (!clientRecord?.id || !clientRecord?.user_id || !clientRecord?.hub_id) {
+      showError("No client record selected for editing or missing essential IDs.");
       setLoading(false);
       return;
     }
 
     // Only update if new values are provided
-    const updateData = {};
-    if (hubspotClientId) {
-      // Encrypt the new client ID before sending
-      const { data: encryptedClientId, error: encryptIdError } = await supabase.rpc('encrypt_secret', {
-        plain_text: hubspotClientId,
-        key: Deno.env.get('ENCRYPTION_KEY') // This will be available in the Edge Function context
-      });
-      if (encryptIdError) {
-        showError('Failed to encrypt Client ID: ' + encryptIdError.message);
-        setLoading(false);
-        return;
-      }
-      updateData.hubspot_client_id = encryptedClientId;
-    }
-    if (hubspotClientSecret) {
-      // Encrypt the new client secret before sending
-      const { data: encryptedClientSecret, error: encryptSecretError } = await supabase.rpc('encrypt_secret', {
-        plain_text: hubspotClientSecret,
-        key: Deno.env.get('ENCRYPTION_KEY') // This will be available in the Edge Function context
-      });
-      if (encryptSecretError) {
-        showError('Failed to encrypt Client Secret: ' + encryptSecretError.message);
-        setLoading(false);
-        return;
-      }
-      updateData.hubspot_client_secret = encryptedClientSecret;
-    }
-
-    if (Object.keys(updateData).length === 0) {
+    if (!hubspotClientId && !hubspotClientSecret) {
       showError("No changes detected. Please enter new credentials to update.");
       setLoading(false);
       return;
     }
 
-    const { error } = await supabase
-      .from('client')
-      .update(updateData)
-      .eq('id', clientRecord.id);
+    // Call the RPC function to encrypt and update
+    const { data, error: rpcError } = await supabase.rpc('update_client_credentials', {
+      p_id: clientRecord.id,
+      p_user_id: clientRecord.user_id,
+      p_hub_id: clientRecord.hub_id,
+      p_hubspot_client_id: hubspotClientId || null, // Pass null if not changed
+      p_hubspot_client_secret: hubspotClientSecret || null, // Pass null if not changed
+    });
 
-    if (error) {
-      showError('Failed to update HubSpot client credentials: ' + error.message);
+    if (rpcError) {
+      showError('Failed to update HubSpot client credentials: ' + rpcError.message);
     } else {
       showSuccess('HubSpot client credentials updated successfully!');
       queryClient.invalidateQueries(['clientAccounts', clientRecord.user_id]);
