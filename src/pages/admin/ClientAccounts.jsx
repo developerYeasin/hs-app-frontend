@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { PlusCircle, RefreshCw, Trash2, Edit } from 'lucide-react'; // Import Edit icon
 import { useSession } from '@/components/auth/SessionContextProvider';
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -29,12 +29,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import AddClientAccountModal from '@/components/admin/client-accounts/AddClientAccountModal'; // New import
+import EditClientAccountModal from '@/components/admin/client-accounts/EditClientAccountModal'; // New import
 
 const fetchClientAccounts = async (userId) => {
   if (!userId) return [];
   const { data, error } = await supabase
     .from('client')
-    .select('*')
+    .select('*') // Select all columns including new ones
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -45,6 +47,9 @@ const ClientAccounts = () => {
   const queryClient = useQueryClient();
   const { user, isLoading: isLoadingUser } = useSession();
   const [clientToDelete, setClientToDelete] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // State for Add modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for Edit modal
+  const [selectedClientToEdit, setSelectedClientToEdit] = useState(null); // State for client being edited
 
   const {
     data: clientAccounts,
@@ -63,22 +68,13 @@ const ClientAccounts = () => {
     }
   }, [isErrorAccounts, accountsError]);
 
-  const handleConnectNewAccount = () => {
-    if (!user) {
-      showError("Please log in to connect a HubSpot account.");
-      return;
-    }
-    const clientId = uuidv4(); // Our internal client ID for this new connection
-    const statePayload = { client_id: clientId, user_id: user.id };
-    window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientId}&state=${encodeURIComponent(JSON.stringify(statePayload))}`;
-  };
-
   const handleReauthenticate = (clientRecord) => {
     if (!user) {
       showError("Please log in to re-authenticate.");
       return;
     }
     // When re-authenticating, we pass the existing clientRecord.id (our UUID) and hub_id in the state
+    // The oauth-callback-hubspot function will then use clientRecord.id to fetch the specific client_id/secret
     const statePayload = { client_id: clientRecord.id, user_id: user.id, hub_id: clientRecord.hub_id };
     window.location.href = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/install-hubspot?client_id=${clientRecord.id}&state=${encodeURIComponent(JSON.stringify(statePayload))}`;
   };
@@ -95,6 +91,11 @@ const ClientAccounts = () => {
     }
   };
 
+  const openEditModal = (client) => {
+    setSelectedClientToEdit(client);
+    setIsEditModalOpen(true);
+  };
+
   if (isLoadingUser) {
     return <div className="text-center py-8">Loading user session...</div>;
   }
@@ -109,7 +110,7 @@ const ClientAccounts = () => {
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-2xl">Manage HubSpot Accounts</CardTitle>
           <Button
-            onClick={handleConnectNewAccount}
+            onClick={() => setIsAddModalOpen(true)} // Open Add modal
             className="py-2.5 px-4 flex items-center"
           >
             <PlusCircle className="mr-2 h-4 w-4" /> Connect New Account
@@ -135,6 +136,7 @@ const ClientAccounts = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Hub ID</TableHead>
+                  <TableHead>Client ID (App)</TableHead>
                   <TableHead>Connected At</TableHead>
                   <TableHead>Expires At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -144,6 +146,9 @@ const ClientAccounts = () => {
                 {clientAccounts?.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.hub_id || 'N/A'}</TableCell>
+                    <TableCell>
+                      {client.hubspot_client_id ? `${client.hubspot_client_id.substring(0, 4)}...` : 'N/A'}
+                    </TableCell>
                     <TableCell>{new Date(client.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       {client.expires_at ? new Date(client.expires_at).toLocaleDateString() : 'N/A'}
@@ -153,6 +158,14 @@ const ClientAccounts = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => openEditModal(client)}
+                          title="Edit Client Credentials"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"
@@ -207,6 +220,19 @@ const ClientAccounts = () => {
           )}
         </CardContent>
       </Card>
+
+      <AddClientAccountModal
+        isOpen={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+      />
+
+      {selectedClientToEdit && (
+        <EditClientAccountModal
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          clientRecord={selectedClientToEdit}
+        />
+      )}
     </div>
   );
 };

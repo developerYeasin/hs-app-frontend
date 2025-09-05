@@ -27,7 +27,7 @@ serve(async (req) => {
   try {
     const { button_id, objectId, objectTypeId, hub_id } = await req.json();
 
-    console.log('execute-button-action: Received payload:', { button_id, objectId, objectTypeId, hub_id }); // Log incoming payload
+    console.log('execute-button-action: Received payload:', { button_id, objectId, objectTypeId, hub_id });
 
     if (!button_id || !hub_id) {
       return new Response(JSON.stringify({ error: 'button_id and hub_id are required' }), {
@@ -38,12 +38,9 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
-    const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET');
-    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
-    if (!supabaseUrl || !supabaseServiceRoleKey || !HUBSPOT_CLIENT_ID || !CLIENT_SECRET) {
-      throw new Error('Missing required environment variables for Supabase or HubSpot.');
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error('Missing required environment variables for Supabase.');
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -66,15 +63,15 @@ serve(async (req) => {
 
     let { api_url, api_method, api_body_template, queries } = button;
 
-    // 2. Retrieve client data by hub_id
-    console.log('execute-button-action: Querying client table for hub_id:', hub_id); // Log the hub_id being queried
+    // 2. Retrieve client data by hub_id to get tokens and custom credentials
+    console.log('execute-button-action: Querying client table for hub_id:', hub_id);
     let { data: clientData, error: clientError } = await supabaseClient
       .from('client')
-      .select('id, accessToken, refresh_token, expires_at')
+      .select('id, accessToken, refresh_token, expires_at, hubspot_client_id, hubspot_client_secret')
       .eq('hub_id', hub_id)
-      .order('created_at', { ascending: false }) // Order by creation date to get the most recent
-      .limit(1) // Limit to one result
-      .maybeSingle(); // Use maybeSingle to handle 0 or 1 result
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (clientError) {
       console.error('execute-button-action: Supabase query error for client data:', clientError);
@@ -95,11 +92,21 @@ serve(async (req) => {
 
     let currentAccessToken = clientData.accessToken;
     const refreshToken = clientData.refresh_token;
-    let expiresAt = new Date(clientData.expires_at);
+    let expiresAt = clientData.expires_at ? new Date(clientData.expires_at) : new Date(0); // Handle null expires_at
+
+    // Determine HubSpot credentials to use for refresh
+    const hubspotClientIdToUse = clientData.hubspot_client_id || Deno.env.get('HUBSPOT_CLIENT_ID');
+    const hubspotClientSecretToUse = clientData.hubspot_client_secret || Deno.env.get('CLIENT_SECRET');
+
+    if (!hubspotClientIdToUse || !hubspotClientSecretToUse) {
+      throw new Error('HubSpot API credentials (Client ID, Client Secret) not available for token refresh.');
+    }
 
     // 3. Token Refresh Logic
     if (expiresAt < new Date()) {
       console.log('execute-button-action: Access token expired, refreshing...');
+      const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+
       const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
         method: 'POST',
         headers: {
@@ -107,8 +114,8 @@ serve(async (req) => {
         },
         body: new URLSearchParams({
           grant_type: 'refresh_token',
-          client_id: HUBSPOT_CLIENT_ID,
-          client_secret: CLIENT_SECRET,
+          client_id: hubspotClientIdToUse,
+          client_secret: hubspotClientSecretToUse,
           redirect_uri: HUBSPOT_REDIRECT_URI,
           refresh_token: refreshToken,
         }).toString(),
@@ -172,8 +179,8 @@ serve(async (req) => {
       objectTypeId: objectTypeId || '',
       hub_id: hub_id || '',
       button_id: button_id || '',
-      contact: objectDetails?.properties || {}, // Use 'contact' for properties for backward compatibility with existing templates
-      object: objectDetails || {}, // General object details
+      contact: objectDetails?.properties || {},
+      object: objectDetails || {},
     };
     console.log('execute-button-action: Dynamic context for placeholders:', dynamicContext);
 

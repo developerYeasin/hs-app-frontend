@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const hub_id_param = url.searchParams.get('hub_id'); // Expect hub_id as a query parameter
+    const hub_id_param = url.searchParams.get('hub_id');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -23,7 +23,6 @@ serve(async (req) => {
       supabaseServiceRoleKey ?? ''
     );
 
-    // Get user from Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
@@ -49,10 +48,10 @@ serve(async (req) => {
       });
     }
 
-    // Fetch the client data associated with this user and hub_id
+    // Fetch the client data associated with this user and hub_id, including custom credentials
     let { data: clientData, error: clientLinkError } = await supabaseClient
       .from('client')
-      .select('id, accessToken, refresh_token, expires_at')
+      .select('id, accessToken, refresh_token, expires_at, hubspot_client_id, hubspot_client_secret')
       .eq('user_id', user.id)
       .eq('hub_id', hub_id_param)
       .single();
@@ -64,17 +63,19 @@ serve(async (req) => {
 
     let accessToken = clientData.accessToken;
     const refreshToken = clientData.refresh_token;
-    const expiresAt = new Date(clientData.expires_at);
+    let expiresAt = clientData.expires_at ? new Date(clientData.expires_at) : new Date(0); // Handle null expires_at
+
+    // Determine HubSpot credentials to use for refresh
+    const hubspotClientIdToUse = clientData.hubspot_client_id || Deno.env.get('HUBSPOT_CLIENT_ID');
+    const hubspotClientSecretToUse = clientData.hubspot_client_secret || Deno.env.get('CLIENT_SECRET');
+
+    if (!hubspotClientIdToUse || !hubspotClientSecretToUse) {
+      throw new Error('HubSpot API credentials (Client ID, Client Secret) not available for token refresh.');
+    }
 
     if (expiresAt < new Date()) {
       console.log('Access token expired, refreshing...');
-      const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
-      const CLIENT_SECRET = Deno.env.get('CLIENT_SECRET');
       const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`; 
-
-      if (!HUBSPOT_CLIENT_ID || !CLIENT_SECRET) {
-        throw new Error('HubSpot API credentials (CLIENT_ID, CLIENT_SECRET) not set in environment variables.');
-      }
 
       const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
         method: 'POST',
@@ -83,8 +84,8 @@ serve(async (req) => {
         },
         body: new URLSearchParams({
           grant_type: 'refresh_token',
-          client_id: HUBSPOT_CLIENT_ID,
-          client_secret: CLIENT_SECRET,
+          client_id: hubspotClientIdToUse,
+          client_secret: hubspotClientSecretToUse,
           redirect_uri: HUBSPOT_REDIRECT_URI,
           refresh_token: refreshToken,
         }).toString(),
@@ -106,7 +107,7 @@ serve(async (req) => {
           refresh_token: newTokens.refresh_token || refreshToken,
           expires_at: newExpiresAt.toISOString(),
         })
-        .eq('id', clientData.id); // Update by our internal client ID
+        .eq('id', clientData.id);
 
       if (updateError) {
         console.error('Supabase update error after refresh:', updateError);
