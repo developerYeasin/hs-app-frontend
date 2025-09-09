@@ -64,12 +64,26 @@ serve(async (req) => {
     }
 
     const HUBSPOT_CLIENT_ID = decryptedClientId;
-    const HUBSPOT_CLIENT_SECRET = decryptedClientSecret; // Not directly used here, but good to have
     const HUBSPOT_SCOPES = 'crm.objects.contacts.read'; // Default scopes
-    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
 
     if (!HUBSPOT_CLIENT_ID) {
       throw new Error('HubSpot Client ID not available after decryption.');
+    }
+
+    let hubIdFromState = null;
+    if (stateParamFromFrontend) {
+      try {
+        const decodedStateString = decodeURIComponent(stateParamFromFrontend);
+        const decodedState = JSON.parse(decodedStateString);
+        hubIdFromState = decodedState.hub_id || null;
+      } catch (parseError) {
+        console.warn('install-hubspot: Could not parse state parameter for hub_id:', parseError.message);
+      }
+    }
+
+    let HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+    if (hubIdFromState) {
+      HUBSPOT_REDIRECT_URI += `?account=${hubIdFromState}`;
     }
 
     // Pass the state parameter received from the frontend directly to HubSpot

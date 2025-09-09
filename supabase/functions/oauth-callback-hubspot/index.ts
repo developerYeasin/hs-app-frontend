@@ -108,7 +108,11 @@ serve(async (req) => {
       throw new Error('HubSpot API credentials (Client ID, Client Secret) not available.');
     }
 
-    const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+    // Dynamically construct the redirect_uri for the token exchange
+    let HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+    if (existing_hub_id) { // Use existing_hub_id from state if available
+      HUBSPOT_REDIRECT_URI += `?account=${existing_hub_id}`;
+    }
 
     const tokenResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
       method: 'POST',
@@ -119,7 +123,7 @@ serve(async (req) => {
         grant_type: 'authorization_code',
         client_id: hubspotClientIdToUse, // Use client-specific or default
         client_secret: hubspotClientSecretToUse, // Use client-specific or default
-        redirect_uri: HUBSPOT_REDIRECT_URI,
+        redirect_uri: HUBSPOT_REDIRECT_URI, // Use the dynamically constructed URI
         code: code,
       }).toString(),
     });
