@@ -109,7 +109,7 @@ serve(async (req) => {
     }
 
     // Dynamically construct the redirect_uri for the token exchange
-    let HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+    let HUBSPOT_REDIRECT_URI = `https://qeuaqcgiriahfwwzenqw.supabase.co/functions/v1/oauth-callback-hubspot`;
     if (existing_hub_id) { // Use existing_hub_id from state if available
       HUBSPOT_REDIRECT_URI += `?account=${existing_hub_id}`;
     }
@@ -202,7 +202,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://hsmini.netlify.app/thank-you`,
+        'Location': `https://hsmini.netlify.app/thank-you`, // This is a hardcoded frontend redirect, ensure it's correct for your deployment
         ...corsHeaders,
       },
     });

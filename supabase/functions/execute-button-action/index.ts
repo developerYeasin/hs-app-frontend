@@ -132,7 +132,7 @@ serve(async (req) => {
     // 3. Token Refresh Logic
     if (expiresAt < new Date()) {
       console.log('execute-button-action: Access token expired, refreshing...');
-      const HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+      const HUBSPOT_REDIRECT_URI = `https://qeuaqcgiriahfwwzenqw.supabase.co/functions/v1/oauth-callback-hubspot`;
 
       const refreshResponse = await fetch('https://api.hubapi.com/oauth/v1/token', {
         method: 'POST',

@@ -81,7 +81,7 @@ serve(async (req) => {
       }
     }
 
-    let HUBSPOT_REDIRECT_URI = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/oauth-callback-hubspot`;
+    let HUBSPOT_REDIRECT_URI = `https://qeuaqcgiriahfwwzenqw.supabase.co/functions/v1/oauth-callback-hubspot`;
     if (hubIdFromState) {
       HUBSPOT_REDIRECT_URI += `?account=${hubIdFromState}`;
     }

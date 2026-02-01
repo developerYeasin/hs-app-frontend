@@ -33,7 +33,7 @@ serve(async (req) => {
     }
 
     // Add the execute-button-action URL to each button
-    const executeButtonActionUrl = `https://txfsspgkakryggiodgic.supabase.co/functions/v1/execute-button-action`;
+    const executeButtonActionUrl = `https://qeuaqcgiriahfwwzenqw.supabase.co/functions/v1/execute-button-action`;
     const buttonsWithActionUrl = buttons.map(button => ({
       ...button,
       execute_action_url: executeButtonActionUrl,
