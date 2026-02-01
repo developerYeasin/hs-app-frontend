@@ -1,287 +1,232 @@
-# HubSpot Mini-App
+# HubSpot Integration App
 
-This is a React application designed to integrate with HubSpot, allowing users to display custom cards with dynamic buttons. These buttons can trigger various API actions, including interactions with HubSpot's CRM, using securely stored credentials and configurable API endpoints.
+## Overview
 
-## Table of Contents
+This application serves as a powerful integration tool for HubSpot, allowing users to extend HubSpot's CRM functionality with custom cards and dynamic action buttons. It provides an administrative interface where users can define custom cards, associate buttons with them, and configure these buttons to trigger external API calls (webhooks) with dynamic data from HubSpot contacts or other objects.
 
-1.  [What the App Does](#what-the-app-does)
-2.  [Features](#features)
-3.  [Tech Stack](#tech-stack)
-4.  [Getting Started](#getting-started)
-    *   [Prerequisites](#prerequisites)
-    *   [Local Development Setup](#local-development-setup)
-    *   [Supabase Setup (Backend)](#supabase-setup-backend)
-        *   [1. Create Supabase Project](#1-create-supabase-project)
-        *   [2. Database Schema](#2-database-schema)
-        *   [3. Row Level Security (RLS)](#3-row-level-security-rls)
-        *   [4. Database Functions for Encryption](#4-database-functions-for-encryption)
-        *   [5. Auto-Update Profiles on Signup](#5-auto-update-profiles-on-signup)
-        *   [6. Supabase Edge Functions](#6-supabase-edge-functions)
-        *   [7. Environment Variables in Supabase](#7-environment-variables-in-supabase)
-    *   [Frontend Environment Variables](#frontend-environment-variables)
-5.  [How to Use the App](#how-to-use-the-app)
-    *   [Authentication](#authentication)
-    *   [Connecting to HubSpot](#connecting-to-hubspot)
-    *   [Managing Cards and Buttons](#managing-cards-and-buttons)
-    *   [Executing Button Actions](#executing-button-actions)
-6.  [Project Structure](#project-structure)
-7.  [Deployment](#deployment)
+**Key Features:**
 
----
-
-## What the App Does
-
-This application serves as a customizable mini-app for HubSpot. It allows you to define "cards" which can contain a title, description, and an image. Each card can then have multiple "buttons" associated with it. These buttons are highly configurable: they can be linked to external API endpoints (including HubSpot's own APIs), specify HTTP methods (GET, POST, PUT, DELETE), and even include dynamic data from the current HubSpot object (like a contact's email or ID) in their URL queries or request bodies.
-
-The app also handles secure storage of HubSpot OAuth credentials, allowing for token refresh and authenticated API calls to HubSpot.
-
-## Features
-
-*   **Customizable Cards:** Display information with titles, descriptions, and images.
-*   **Dynamic Action Buttons:** Configure buttons to trigger external API calls.
-*   **HubSpot Integration:** Seamlessly connect to HubSpot via OAuth to fetch contact/object data and make authenticated API calls.
-*   **Secure Credential Storage:** HubSpot client IDs and secrets are encrypted and stored securely in Supabase.
-*   **Token Refresh:** Automatically handles HubSpot access token refreshing when expired.
-*   **Placeholder Support:** Use dynamic values (e.g., `{{contact.email}}`, `{{objectId}}`) in button API URLs and bodies.
-*   **User Authentication:** Basic user sign-up and login powered by Supabase Auth.
+*   **Admin Panel:** A secure, authenticated dashboard for managing your HubSpot integrations.
+*   **HubSpot Account Management:** Connect multiple HubSpot accounts securely using OAuth or manual credential entry.
+*   **Dynamic Card Creation:** Define custom cards with titles, descriptions, and images that can be displayed within HubSpot CRM.
+*   **Configurable Action Buttons:** Attach buttons to your custom cards, each configured with a specific API URL, HTTP method (GET, POST, PUT, DELETE, PATCH), and dynamic payload/query parameters.
+*   **Dynamic Placeholders:** Utilize placeholders like `{{contact.property}}`, `{{objectId}}`, `{{objectTypeId}}`, `{{hub_id}}`, and `{{button_id}}` in API URLs, query parameters, and request bodies to send context-rich data from HubSpot.
+*   **Secure Credential Storage:** HubSpot Client IDs and Secrets are encrypted and stored securely in Supabase.
+*   **Automated Token Refresh:** Access tokens for HubSpot are automatically refreshed using stored refresh tokens and client credentials.
+*   **Edge Function Powered:** Leverages Supabase Edge Functions for secure server-side logic, token management, and API interactions.
 
 ## Tech Stack
 
 *   **Frontend:** React, TypeScript, React Router
-*   **Styling:** Tailwind CSS, Shadcn/ui components
+*   **Styling:** Tailwind CSS, shadcn/ui components
 *   **Backend/Database/Auth:** Supabase (PostgreSQL, Auth, Edge Functions)
 *   **Icons:** Lucide React
 *   **State Management/Data Fetching:** React Query
+*   **Forms:** React Hook Form, Zod (for validation)
+*   **Utility:** `clsx`, `tailwind-merge`, `react-select`, `sonner` (for toasts)
 
 ## Getting Started
 
-Follow these steps to get your application up and running.
+Follow these steps to get your HubSpot Integration App up and running.
 
 ### Prerequisites
 
 *   Node.js (v18 or higher)
-*   npm or yarn
-*   A Supabase account and project
+*   npm or Yarn
+*   A Supabase account (free tier is sufficient for development)
+*   A HubSpot Developer Account (to create a private app and get API credentials)
 
-### Local Development Setup
+### 1. Clone the Repository
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repository-url>
-    cd <your-app-name>
-    ```
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    # or
-    yarn install
-    ```
-3.  **Create a `.env` file:**
-    Create a file named `.env` in the root of your project and add the following environment variables. You will get these values from your Supabase project (see [Supabase Setup](#supabase-setup-backend)).
+You already have the codebase.
 
-    ```env
-    VITE_SUPABASE_URL="https://qeuaqcgiriahfwwzenqw.supabase.co"
-    VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldWFxY2dpcmlhaGZ3d3plbnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjEyNDAsImV4cCI6MjA4NTUzNzI0MH0.uU3tCR1KbR1Zb5kCFrdk4R2k1hqT4q8FSPb1y5AE90g"
-    ```
-4.  **Start the development server:**
-    ```bash
-    npm run dev
-    # or
-    yarn dev
-    ```
-    The app should now be running on `http://localhost:8080`.
+### 2. Install Dependencies
 
-### Supabase Setup (Backend)
+Navigate to the project root and install the required npm packages:
 
-This application heavily relies on Supabase for authentication, database storage, and serverless Edge Functions.
+```bash
+npm install
+# or
+yarn install
+```
 
-#### 1. Create Supabase Project
+### 3. Supabase Setup
 
-If you don't have one, create a new project on [Supabase](https://app.supabase.com/). Note down your **Project URL** and **Anon Key** from your project settings -> API. These will be used in your `.env` file.
+This application heavily relies on Supabase for authentication, database storage, and serverless functions.
 
-#### 2. Database Schema
+#### a. Create a Supabase Project
 
-You need to set up the following tables in your Supabase project's SQL Editor.
+1.  Go to [Supabase](https://app.supabase.com/) and create a new project.
+2.  Note down your **Project ID** (e.g., `qeuaqcgiriahfwwzenqw`). This will be used in your environment variables.
 
-**`profiles` table (for user profiles)**
+#### b. Configure Environment Variables
 
-```sql
+You need to set up environment variables for both your frontend and your Supabase Edge Functions.
+
+**For Frontend (`.env` file in your project root):**
+
+Create a `.env` file in the root of your project and add the following:
+
+```env
+VITE_SUPABASE_URL="https://qeuaqcgiriahfwwzenqw.supabase.co"
+VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldWFxY2dpcmlhaGZ3d3plbnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjEyNDAsImV4cCI6MjA4NTUzNzI0MH0.uU3tCR1KbR1Zb5kCFrdk4R2k1hqT4q8FSPb1y5AE90g"
+```
+
+*   Replace `https://qeuaqcgiriahfwwzenqw.supabase.co` with your actual Supabase project URL.
+*   Replace the `VITE_SUPABASE_ANON_KEY` with your actual Supabase "anon" (public) key.
+
+**For Supabase Edge Functions (Supabase Dashboard -> Edge Functions -> Configuration -> Secrets):**
+
+You need to set these secrets in your Supabase project dashboard.
+
+*   `SUPABASE_URL`: Your Supabase project URL (e.g., `https://qeuaqcgiriahfwwzenqw.supabase.co`).
+*   `SUPABASE_ANON_KEY`: Your Supabase "anon" (public) key.
+*   `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase "service_role" key (found under Project Settings -> API). This key has elevated privileges and should **never** be exposed in your frontend.
+*   `ENCRYPTION_KEY`: A strong, random string used to encrypt sensitive HubSpot client credentials in your database. You can generate one using a tool like `openssl rand -base64 32`.
+*   `HUBSPOT_CLIENT_ID`: Your HubSpot App's Client ID (obtained from HubSpot Developer Account, see step 4).
+*   `CLIENT_SECRET`: Your HubSpot App's Client Secret (obtained from HubSpot Developer Account, see step 4).
+
+#### c. Database Schema (SQL Migrations)
+
+Execute the following SQL commands in your Supabase SQL Editor (SQL tab in the dashboard) to set up your database tables, functions, and Row Level Security (RLS) policies.
+
+**1. Create `profiles` Table (for user profiles)**
+
+This table stores additional user information and is linked to Supabase Auth.
+
+<dyad-execute-sql description="Create profiles table in public schema">
 CREATE TABLE public.profiles (
   id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   first_name TEXT,
   last_name TEXT,
   PRIMARY KEY (id)
 );
-```
 
-**`client` table (for HubSpot integration credentials)**
+alter table public.profiles enable row level security;
 
-```sql
+create policy "Public profiles are viewable by everyone." on profiles for select using ( true );
+
+create policy "Users can insert their own profile." on profiles for insert with check ( auth.uid() = id );
+
+create policy "Users can update own profile." on profiles for update using ( auth.uid() = id );
+</dyad-execute-sql>
+
+**2. Create `client` Table (for HubSpot client credentials and tokens)**
+
+This table stores the HubSpot `hub_id`, `accessToken`, `refreshToken`, and the encrypted `hubspot_client_id` and `hubspot_client_secret` for each connected HubSpot account.
+
+<dyad-execute-sql description="Create client table in public schema">
 CREATE TABLE public.client (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-    contacts TEXT NOT NULL,
-    "accessToken" TEXT,
-    "sessionID" TEXT,
-    refresh_token TEXT,
-    expires_at TIMESTAMP WITH TIME ZONE,
-    user_id UUID,
-    hub_id VARCHAR,
-    hubspot_client_id TEXT, -- Changed from BYTEA to TEXT
-    hubspot_client_secret TEXT -- Changed from BYTEA to TEXT
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    contacts text NOT NULL,
+    "accessToken" text,
+    "sessionID" text,
+    refresh_token text,
+    expires_at timestamp with time zone,
+    user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+    hub_id character varying,
+    hubspot_client_id text,
+    hubspot_client_secret text,
+    PRIMARY KEY (id)
 );
 
-ALTER TABLE public.client ADD CONSTRAINT client_pkey PRIMARY KEY (id);
-ALTER TABLE public.client ADD CONSTRAINT unique_user_hub_id UNIQUE (user_id, hub_id);
-ALTER TABLE public.client ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
-```
-
-**`cards` table (for displaying content)**
-
-```sql
-CREATE TABLE public.cards (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    image_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.cards ADD CONSTRAINT cards_pkey PRIMARY KEY (id);
-```
-
-**`buttons` table (for actions within cards)**
-
-```sql
-CREATE TABLE public.buttons (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    card_id UUID NOT NULL,
-    button_text TEXT NOT NULL,
-    api_url TEXT,
-    button_style JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    queries JSONB DEFAULT '[]'::jsonb,
-    api_method TEXT DEFAULT 'POST'::text NOT NULL,
-    api_body_template TEXT
-);
-
-ALTER TABLE public.buttons ADD CONSTRAINT buttons_pkey PRIMARY KEY (id);
-ALTER TABLE public.buttons ADD CONSTRAINT buttons_card_id_fkey FOREIGN KEY (card_id) REFERENCES public.cards(id) ON DELETE CASCADE;
-```
-
-**`query_params` table (if you need reusable query parameters, though currently integrated directly into buttons)**
-
-```sql
-CREATE TABLE public.query_params (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    default_value TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.query_params ADD CONSTRAINT query_params_pkey PRIMARY KEY (id);
-ALTER TABLE public.query_params ADD CONSTRAINT query_params_name_key UNIQUE (name);
-```
-
-**`webhooks` table (for generic webhook configurations)**
-
-```sql
-CREATE TABLE public.webhooks (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    name TEXT NOT NULL,
-    url TEXT NOT NULL,
-    method TEXT DEFAULT 'POST'::text NOT NULL,
-    headers JSONB DEFAULT '{}'::jsonb NOT NULL,
-    body_template TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.webhooks ADD CONSTRAINT webhooks_pkey PRIMARY KEY (id);
-```
-
-#### 3. Row Level Security (RLS)
-
-Enable RLS for the following tables and apply the policies:
-
-**`profiles` RLS Policies**
-
-```sql
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING ( true );
-CREATE POLICY "Users can insert their own profile." ON profiles FOR INSERT WITH CHECK ( auth.uid() = id );
-CREATE POLICY "Users can update own profile." ON profiles FOR UPDATE USING ( auth.uid() = id );
-```
-
-**`client` RLS Policies**
-
-```sql
 ALTER TABLE public.client ENABLE ROW LEVEL SECURITY;
+
+CREATE UNIQUE INDEX unique_user_hub_id ON public.client (user_id, hub_id);
 
 CREATE POLICY "Allow authenticated users to insert their own client data." ON public.client FOR INSERT WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Allow authenticated users to update their own client data." ON public.client FOR UPDATE USING ((auth.uid() = user_id));
 CREATE POLICY "Allow authenticated users to view their own client data." ON public.client FOR SELECT USING ((auth.uid() = user_id));
-```
+</dyad-execute-sql>
 
-**`cards` RLS Policies**
+**3. Create `cards` Table**
 
-```sql
+This table stores the definition of custom cards.
+
+<dyad-execute-sql description="Create cards table in public schema">
+CREATE TABLE public.cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    title text NOT NULL,
+    description text,
+    image_url text,
+    created_at timestamp with time zone DEFAULT now(),
+    PRIMARY KEY (id)
+);
+
 ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can delete cards" ON public.cards FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can insert cards" ON public.cards FOR INSERT WITH CHECK ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can update cards" ON public.cards FOR UPDATE USING ((auth.role() = 'authenticated'::text));
+CREATE POLICY "Authenticated users can delete cards" ON public.cards FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can view cards" ON public.cards FOR SELECT USING ((auth.role() = 'authenticated'::text));
-```
+</dyad-execute-sql>
 
-**`buttons` RLS Policies**
+**4. Create `buttons` Table**
 
-```sql
+This table stores the definition of action buttons associated with cards.
+
+<dyad-execute-sql description="Create buttons table in public schema">
+CREATE TABLE public.buttons (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    card_id uuid REFERENCES public.cards(id) ON DELETE CASCADE NOT NULL,
+    button_text text NOT NULL,
+    api_url text NOT NULL,
+    api_method text DEFAULT 'POST'::text NOT NULL,
+    api_body_template text,
+    queries jsonb DEFAULT '[]'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    PRIMARY KEY (id)
+);
+
 ALTER TABLE public.buttons ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can delete buttons" ON public.buttons FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can insert buttons" ON public.buttons FOR INSERT WITH CHECK ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can update buttons" ON public.buttons FOR UPDATE USING ((auth.role() = 'authenticated'::text));
+CREATE POLICY "Authenticated users can delete buttons" ON public.buttons FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can view buttons" ON public.buttons FOR SELECT USING ((auth.role() = 'authenticated'::text));
--- This policy is also present in your dump, but might be redundant if the above are sufficient
--- CREATE POLICY "Public buttons are viewable by everyone." ON public.buttons FOR SELECT USING (true);
-```
+</dyad-execute-sql>
 
-**`query_params` RLS Policies**
+**5. Create `query_params` Table (if needed for predefined query parameters)**
 
-```sql
+This table is used to store predefined query parameters that can be selected when creating buttons.
+
+<dyad-execute-sql description="Create query_params table in public schema">
+CREATE TABLE public.query_params (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL UNIQUE,
+    description text,
+    default_value text,
+    created_at timestamp with time zone DEFAULT now(),
+    PRIMARY KEY (id)
+);
+
 ALTER TABLE public.query_params ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can delete their own query_params." ON public.query_params FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can insert their own query_params." ON public.query_params FOR INSERT WITH CHECK ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can update their own query_params." ON public.query_params FOR UPDATE USING ((auth.role() = 'authenticated'::text));
+CREATE POLICY "Authenticated users can delete their own query_params." ON public.query_params FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Public query_params are viewable by authenticated users." ON public.query_params FOR SELECT USING ((auth.role() = 'authenticated'::text));
-```
+</dyad-execute-sql>
 
-**`webhooks` RLS Policies**
+**6. Create `webhooks` Table (already exists, but ensure RLS)**
 
-```sql
+This table is for general webhooks, currently used by `simulate-email-webhook`.
+
+<dyad-execute-sql description="Ensure RLS for webhooks table">
 ALTER TABLE public.webhooks ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can delete their own webhooks." ON public.webhooks FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can insert their own webhooks." ON public.webhooks FOR INSERT WITH CHECK ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Authenticated users can update their own webhooks." ON public.webhooks FOR UPDATE USING ((auth.role() = 'authenticated'::text));
+CREATE POLICY "Authenticated users can delete their own webhooks." ON public.webhooks FOR DELETE USING ((auth.role() = 'authenticated'::text));
 CREATE POLICY "Public webhooks are viewable by authenticated users." ON public.webhooks FOR SELECT USING ((auth.role() = 'authenticated'::text));
-```
+</dyad-execute-sql>
 
-#### 4. Database Functions for Encryption
+**7. Create Encryption/Decryption Functions**
 
-These functions are used to encrypt and decrypt sensitive HubSpot client credentials stored in the `client` table.
+These functions are used by Edge Functions to securely store and retrieve HubSpot client credentials.
 
-```sql
--- Drop existing functions if they exist with different signatures
-DROP FUNCTION IF EXISTS public.encrypt_secret(bytea, text);
-DROP FUNCTION IF EXISTS public.encrypt_secret(text, text);
-DROP FUNCTION IF EXISTS public.decrypt_secret(bytea, text);
-DROP FUNCTION IF EXISTS public.decrypt_secret(text, text);
-
--- Recreate encrypt_secret function to return TEXT
+<dyad-execute-sql description="Create encrypt_secret function">
 CREATE OR REPLACE FUNCTION public.encrypt_secret(plain_text TEXT, key TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -294,7 +239,10 @@ BEGIN
 END;
 $$;
 
--- Recreate decrypt_secret function to return TEXT
+GRANT EXECUTE ON FUNCTION public.encrypt_secret(TEXT, TEXT) TO service_role;
+</dyad-execute-sql>
+
+<dyad-execute-sql description="Create decrypt_secret function">
 CREATE OR REPLACE FUNCTION public.decrypt_secret(encrypted_data TEXT, key TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -309,16 +257,14 @@ BEGIN
 END;
 $$;
 
--- Grant permissions to the functions
-GRANT EXECUTE ON FUNCTION public.encrypt_secret(TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.decrypt_secret(TEXT, TEXT) TO service_role;
-```
+</dyad-execute-sql>
 
-#### 5. Auto-Update Profiles on Signup
+**8. Create `handle_new_user` Trigger**
 
-This trigger automatically creates a `profile` entry for new users.
+This trigger automatically creates a profile entry for new users.
 
-```sql
+<dyad-execute-sql description="Create function to insert profile when user signs up">
 CREATE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE PLPGSQL
@@ -335,107 +281,128 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+</dyad-execute-sql>
+
+#### d. Deploy Supabase Edge Functions
+
+The application uses several Supabase Edge Functions for secure server-side operations, including HubSpot OAuth, token management, and executing button actions. These functions are already in your `supabase/functions` directory. They will be deployed automatically when you make changes to them.
+
+Ensure the following functions are present and correctly configured (their content is already in your codebase):
+
+*   `supabase/functions/install-hubspot/index.ts`
+*   `supabase/functions/oauth-callback-hubspot/index.ts`
+*   `supabase/functions/save-client-credentials/index.ts`
+*   `supabase/functions/execute-button-action/index.ts`
+*   `supabase/functions/get-all-buttons/index.ts`
+*   `supabase/functions/simulate-email-webhook/index.ts` (Example webhook)
+
+### 4. HubSpot App Setup
+
+You need to create a private app in your HubSpot Developer Account to get the necessary Client ID and Client Secret for OAuth.
+
+1.  **Log in to your HubSpot Developer Account:** Go to [developers.hubspot.com](https://developers.hubspot.com/).
+2.  **Create a Private App:**
+    *   Navigate to "Apps" -> "Private Apps".
+    *   Click "Create a private app".
+    *   Give your app a name (e.g., "My Dyad Integration App").
+    *   Go to the "Auth" tab.
+    *   Note down your **Client ID** and **Client Secret**. You will use these for the `HUBSPOT_CLIENT_ID` and `CLIENT_SECRET` environment variables in Supabase.
+    *   Add the following **Redirect URL** for OAuth:
+        `https://qeuaqcgiriahfwwzenqw.supabase.co/functions/v1/oauth-callback-hubspot`
+        (Replace `qeuaqcgiriahfwwzenqw.supabase.co` with your actual Supabase project URL).
+    *   Under "Scopes", ensure you add at least `crm.objects.contacts.read` for the app to function correctly. You might need more scopes depending on the HubSpot data you wish to interact with.
+    *   Publish your app.
+
+### 5. Run the Application
+
+Once all Supabase and HubSpot configurations are complete, you can run your application locally:
+
+```bash
+npm run dev
+# or
+yarn dev
 ```
 
-#### 6. Supabase Edge Functions
-
-You need to deploy the following Edge Functions to your Supabase project. The code for these functions is located in the `supabase/functions` directory in your project.
-
-*   **`get-all-buttons`**: Fetches all configured buttons and their associated card details.
-*   **`execute-button-action`**: Executes the API call defined by a button, handling HubSpot token refresh and dynamic placeholder replacement.
-*   **`save-client-credentials`**: Securely saves encrypted HubSpot client credentials to the `client` table.
-*   **`install-hubspot`**: Initiates the HubSpot OAuth flow, redirecting the user to HubSpot for authorization.
-*   **`oauth-callback-hubspot`**: Handles the callback from HubSpot after OAuth authorization, exchanges the code for tokens, and saves them securely.
-
-**Important:** When deploying these functions, ensure that the `HUBSPOT_REDIRECT_URI` in `install-hubspot` and `oauth-callback-hubspot` points to the *actual deployed URL* of your `oauth-callback-hubspot` Edge Function. For example: `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/functions/v1/oauth-callback-hubspot`.
-
-#### 7. Environment Variables in Supabase
-
-Go to your Supabase project settings -> Edge Functions -> Configuration -> Secrets and add the following secrets:
-
-*   `SUPABASE_URL`: Your Supabase project URL (e.g., `https://qeuaqcgiriahfwwzenqw.supabase.co`)
-*   `SUPABASE_ANON_KEY`: Your Supabase project Anon Key
-*   `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase project Service Role Key (found under Project Settings -> API -> Project API keys)
-*   `ENCRYPTION_KEY`: A strong, random string used for encrypting/decrypting sensitive data (e.g., HubSpot client secrets). Generate a long, random string for this.
-*   `HUBSPOT_CLIENT_ID`: Your HubSpot Developer App's Client ID (if you want to use a default for all clients, otherwise it's stored per client).
-*   `CLIENT_SECRET`: Your HubSpot Developer App's Client Secret (if you want to use a default for all clients, otherwise it's stored per client).
-
-### Frontend Environment Variables
-
-Ensure your local `.env` file (and your deployment environment variables) contain:
-
-```env
-VITE_SUPABASE_URL="https://qeuaqcgiriahfwwzenqw.supabase.co"
-VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldWFxY2dpcmlhaGZ3d3plbnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjEyNDAsImV4cCI6MjA4NTUzNzI0MH0.uU3tCR1KbR1Zb5kCFrdk4R2k1hqT4q8FSPb1y5AE90g"
-```
+The application should now be accessible in your browser, typically at `http://localhost:8080`.
 
 ## How to Use the App
 
-### Authentication
+### 1. Admin Panel Access
 
-1.  **Sign Up:** Navigate to the sign-up page (if implemented) or use a tool like Supabase Auth UI to create a new user.
-2.  **Email Confirmation:** After signing up, check your email inbox (and spam folder) for a confirmation link from Supabase. Click this link to verify your account. You will not be able to log in until your email is confirmed.
-3.  **Login:** Once your email is confirmed, you can log in using your email and password.
+*   **Sign Up:** Navigate to `/signup` in your application. Create a new user account.
+*   **Email Confirmation:** After signing up, you will receive a confirmation email from Supabase. Click the link in this email to verify your account.
+*   **Login:** Once your email is confirmed, go to `/login` and log in with your new credentials. You will be redirected to the Admin Dashboard.
 
-### Connecting to HubSpot
+### 2. Connecting HubSpot Accounts
 
-The application will likely have a UI to initiate the HubSpot OAuth flow. This involves:
+From the Admin Dashboard, navigate to "Client Accounts" in the sidebar.
 
-1.  **Initiating OAuth:** The app will redirect you to HubSpot's authorization page.
-2.  **Granting Permissions:** You will be prompted to grant the necessary permissions to your HubSpot account.
-3.  **Callback:** HubSpot will redirect you back to your application (specifically, the `oauth-callback-hubspot` Edge Function), which will handle token exchange and save your HubSpot access and refresh tokens securely in the Supabase `client` table.
+*   **Manual Entry:**
+    *   Click "Connect New Account".
+    *   Enter your HubSpot **Hub ID**, **HubSpot App Client ID**, and **HubSpot App Client Secret** (from your HubSpot Private App).
+    *   Click "Add Manually".
+    *   After adding, you **must** click the "Connect via OAuth" button (refresh icon) next to the newly added account in the table. This will initiate the OAuth flow to obtain `accessToken` and `refreshToken` for that specific HubSpot account.
+*   **OAuth Flow:**
+    *   If you click "Connect via OAuth" directly (e.g., for an existing entry or if you were to add an OAuth button on the public page), you will be redirected to HubSpot to grant permissions.
+    *   After granting permissions, you will be redirected back to your app's `/thank-you` page, and the HubSpot account's tokens will be updated in your Supabase `client` table.
 
-### Managing Cards and Buttons
+### 3. Managing Cards
 
-Currently, the UI for managing cards and buttons is not explicitly defined in the provided files. You would typically interact with the `cards` and `buttons` tables directly via the Supabase dashboard or build an admin interface within your application to:
+From the Admin Dashboard, navigate to "Manage Cards" in the sidebar.
 
-*   **Create Cards:** Add new entries to the `cards` table with a `title`, `description`, and `image_url`.
-*   **Create Buttons:** For each card, add entries to the `buttons` table, specifying:
-    *   `card_id`: The ID of the card this button belongs to.
-    *   `button_text`: The text displayed on the button.
-    *   `api_url`: The target API endpoint.
-    *   `api_method`: HTTP method (GET, POST, PUT, DELETE).
-    *   `api_body_template`: (For POST/PUT/PATCH) A JSON string template for the request body, supporting placeholders.
-    *   `queries`: A JSON array of objects `[{ "key": "paramName", "value": "{{placeholder}}" }]` for GET request query parameters.
+*   **Add New Card:** Click "Add New Card" (currently disabled, but this is where it would be). Fill in the title, description, and an optional image URL.
+*   **Edit/View/Delete Cards:** Use the action buttons in the table to modify, view details, or remove existing cards.
 
-### Executing Button Actions
+### 4. Managing Buttons
 
-Once cards and buttons are configured, when a user interacts with a button in the UI, the `execute-button-action` Edge Function is invoked. This function:
+From the Admin Dashboard, navigate to "Manage Buttons" in the sidebar.
 
-1.  Fetches button details and associated HubSpot client credentials.
-2.  Refreshes the HubSpot access token if it's expired.
-3.  Fetches details of the relevant HubSpot object (e.g., contact) if `objectId` and `objectTypeId` are provided.
-4.  Replaces placeholders in the `api_url` and `api_body_template` with dynamic data (e.g., `contact.email`, `objectId`, `hub_id`).
-5.  Executes the configured API call to the external service or HubSpot.
-6.  Returns the response to the frontend.
+*   **Add New Button:** Click "Add New Button".
+    *   **Select Card:** Choose which card this button will be associated with.
+    *   **Button Text:** The text displayed on the button.
+    *   **Webhook API URL:** The external API endpoint this button will call.
+    *   **API Method:** Select the HTTP method (GET, POST, PUT, DELETE, PATCH).
+    *   **Query Parameters (for GET):** Add key-value pairs. You can choose "Static Value" or "Contact Property" for the value. If "Contact Property", select from the suggested HubSpot contact properties.
+    *   **API Body Template (for POST/PUT/PATCH):** Provide a JSON body template.
+    *   **Dynamic Placeholders:** You can use the following placeholders in your API URL, query parameters, and API body template:
+        *   `{{contact.property}}`: Replaced with the value of a specific HubSpot contact property (e.g., `{{contact.email}}`, `{{contact.firstname}}`).
+        *   `{{objectId}}`: Replaced with the ID of the HubSpot object (e.g., contact ID).
+        *   `{{objectTypeId}}`: Replaced with the type ID of the HubSpot object (e.g., `0-1` for contacts).
+        *   `{{hub_id}}`: Replaced with the HubSpot Hub ID of the connected account.
+        *   `{{button_id}}`: Replaced with the unique ID of the button being clicked.
+*   **Edit/View/Delete Buttons:** Use the action buttons in the table to modify, view details, or remove existing buttons.
 
-## Project Structure
+### 5. Interacting with HubSpot CRM
 
-The project follows a standard React application structure:
+Once cards and buttons are configured in the admin panel and a HubSpot account is connected:
 
-*   `src/`: Contains all source code.
-    *   `src/App.tsx`: Main application component, defines React Router routes.
-    *   `src/main.tsx`: Entry point for the React application.
-    *   `src/pages/`: React components for different pages (e.g., `Index.tsx`, `NotFound.tsx`).
-    *   `src/components/`: Reusable React components.
-        *   `src/components/ui/`: Shadcn/ui components.
-    *   `src/hooks/`: Custom React hooks.
-    *   `src/lib/`: Utility functions and configurations.
-    *   `src/integrations/supabase/`: Supabase client setup.
-    *   `src/utils/`: General utility functions (e.g., toast notifications).
-*   `supabase/functions/`: Contains the TypeScript source code for Supabase Edge Functions.
-*   `public/`: Static assets.
-*   `tailwind.config.ts`, `postcss.config.js`, `globals.css`: Tailwind CSS configuration and global styles.
+*   **Custom CRM Cards:** The custom cards you define will appear within the HubSpot CRM (e.g., on a contact's record page) as a custom extension.
+*   **Triggering Actions:** When a user clicks one of your configured buttons within HubSpot, the associated Edge Function (`execute-button-action`) will be invoked. This function will:
+    1.  Fetch the button's configuration.
+    2.  Refresh the HubSpot access token if expired.
+    3.  Fetch details of the HubSpot object (e.g., contact) from which the button was clicked.
+    4.  Replace all dynamic placeholders in the API URL, query parameters, and body template with actual data.
+    5.  Execute the external API call (webhook) with the prepared data.
 
 ## Deployment
 
-To deploy this application (e.g., to Netlify, Vercel, or other hosting providers):
+When deploying your application to a hosting provider (e.g., Netlify, Vercel), ensure that you set the environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) in their respective configuration settings. The Supabase Edge Function secrets are managed directly within your Supabase project.
 
-1.  **Build the application:**
-    ```bash
-    npm run build
-    # or
-    yarn build
-    ```
-2.  **Configure Environment Variables:** Ensure that the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` environment variables are set in your hosting provider's settings.
-3.  **Deploy Edge Functions:** Supabase Edge Functions are deployed directly through the Supabase CLI or dashboard. Ensure they are up-to-date and correctly linked to your project.
+## Troubleshooting
+
+*   **`net::ERR_NAME_NOT_RESOLVED` or API errors:**
+    *   Double-check that `VITE_SUPABASE_URL` in your local `.env` file (and deployment environment variables) is correctly set to your Supabase project URL (`https://qeuaqcgiriahfwwzenqw.supabase.co`).
+    *   Verify that all Supabase Edge Functions have the correct Supabase project URL hardcoded where necessary (as updated in the previous step).
+    *   Ensure your Supabase project is active and accessible.
+*   **"Email not confirmed" on login:**
+    *   Check the inbox (and spam/junk folders) of the email address used for signup for a confirmation link from Supabase. Click this link to verify your account.
+    *   If no email is received, check your Supabase Auth settings for email templates and SMTP configuration.
+*   **HubSpot OAuth/Token Errors:**
+    *   Ensure your HubSpot Private App's Client ID, Client Secret, and Redirect URL are correctly configured in both HubSpot and your Supabase Edge Function secrets.
+    *   Verify that the necessary scopes (e.g., `crm.objects.contacts.read`) are granted to your HubSpot Private App.
+    *   Check Supabase Edge Function logs for `install-hubspot` and `oauth-callback-hubspot` for detailed error messages.
+*   **Button Action Failures:**
+    *   Check the `execute-button-action` Edge Function logs in Supabase for any errors during token refresh, HubSpot object fetching, or the external API call.
+    *   Ensure the `ENCRYPTION_KEY` secret is correctly set in Supabase for decrypting HubSpot credentials.
+    *   Verify the `api_url` and `api_method` for your buttons are correct and the external endpoint is reachable.
+    *   Confirm that the JSON structure in `api_body_template` is valid and placeholders are correctly formatted.

@@ -1,14 +1,21 @@
 import { defineConfig } from "vite";
-import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { fileURLToPath } from 'url';
 
-export default defineConfig(() => ({
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export default defineConfig(async () => ({
   server: {
     host: "::",
     port: 8080,
   },
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [
+    (await import("@dyad-sh/react-vite-component-tagger")).default(),
+    react() // Removed jsxImportSource as it's not needed for JSX files
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
